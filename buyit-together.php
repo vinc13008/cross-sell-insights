@@ -1,6 +1,7 @@
 <?php
 /**
  * Plugin Name:       BuyIt Together
+ * Plugin URI:        https://github.com/vinc13008/buyit-together
  * Description:       Shows on each product page the parts customers actually bought with it, deduced from your order history. No per-product setup: associations are recalculated weekly.
  * Version:           1.0.0
  * Requires at least: 6.0
@@ -12,7 +13,6 @@
  * Domain Path:       /languages
  * WC requires at least: 7.0
  * WC tested up to:   11.0
-
  *
  * @package BuyIt_Together
  */
