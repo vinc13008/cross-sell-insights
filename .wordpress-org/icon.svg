@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <rect width="256" height="256" fill="#1d2327"/>
+  <!-- Deux produits ; l'intersection est le propos de l'extension. -->
+  <circle cx="100" cy="128" r="54" fill="#2271b1"/>
+  <circle cx="156" cy="128" r="54" fill="#f0a30a"/>
+  <path d="M 128,81.83 A 54,54 0 0 1 128,174.17 A 54,54 0 0 1 128,81.83 Z" fill="#f6f7f7"/>
+</svg>

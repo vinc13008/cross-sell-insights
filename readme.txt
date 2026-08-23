@@ -1,0 +1,101 @@
+=== BuyIt Together ===
+Contributors: powerloop
+Tags: woocommerce, cross-sells, related products, upsell, recommendations
+Requires at least: 6.0
+Tested up to: 7.1
+Requires PHP: 8.0
+Stable tag: 1.0.0
+License: GPL-2.0-or-later
+License URI: https://www.gnu.org/licenses/gpl-2.0.html
+
+Shows on each product page the items customers actually bought with it, deduced from your own order history. No per-product setup.
+
+== Description ==
+
+BuyIt Together reads your order history, counts which products end up in the
+same order, and shows the strongest pairs on each product page. Nothing is
+configured product by product: the associations are recalculated every week
+from what your customers actually did.
+
+It also tells you how well your existing WooCommerce cross-sells match reality,
+and proposes the associations your sales support but your configuration is
+missing.
+
+= What it gives you =
+
+* **A suggestion block on the product page**, built from real co-purchases.
+* **A diagnosis** of your existing cross-sells: how many are confirmed by
+  actual orders, and how many are not.
+* **Recommendations** you can apply in bulk, with one-click undo.
+* **Rules by tag or category**, for products that do not have enough history
+  yet — for example, suggest a screwdriver kit on every part tagged "Gimbal".
+* **A category editor** that lists a whole category, one product per row, with
+  its suggestions, cross-sells and upsells editable in place.
+* **Bulk assignment** across a category, a tag or a hand-picked selection.
+
+= What it does not do =
+
+It does not call any external service. Everything is computed from your own
+database, on your own server. No account, no API key, no data leaves the site.
+
+= Two kinds of suggestion, kept separate =
+
+WooCommerce cross-sells appear in the **cart**, once the customer has chosen a
+product. This plugin's own suggestions appear on the **product page**, before
+they add to cart. The admin screen keeps them in separate tabs, because they
+reach the customer at different moments and are stored in different places —
+cross-sells in WooCommerce's own fields, shared with the rest of your site;
+product page suggestions in the plugin's own storage.
+
+== Installation ==
+
+1. Upload the plugin to `/wp-content/plugins/buyit-together`, or install it
+   from Plugins → Add New → Upload.
+2. Activate it. WooCommerce must be active.
+3. Go to WooCommerce → BuyIt Together and press **Recalculate now** to build
+   the first set of associations.
+
+The calculation then runs automatically once a week.
+
+== Frequently Asked Questions ==
+
+= Does it modify my WooCommerce cross-sells? =
+
+Only when you ask it to. Applying recommendations or using bulk assignment
+writes to WooCommerce's own cross-sell fields, and each such operation can be
+undone from the Cart tab. The product page suggestions are stored separately
+and never touch WooCommerce's data.
+
+= What happens to my data if I uninstall it? =
+
+The plugin's own settings and computed associations are deleted. Your
+WooCommerce cross-sells and upsells are left untouched — they are your site's
+data, not the plugin's, and you may have entered them by hand before
+installing it.
+
+= How much history does it use? =
+
+The last 12 months of completed and processing orders, filterable via
+`bit_fenetre_jours`. A pair must appear at least twice to be stored, and at
+least three times to be recommended.
+
+= My catalogue has products that are bought with everything. =
+
+Add them to "Products never to suggest elsewhere" in the Analysis tab. A
+consumable or a free gift shows up in almost every order and would otherwise
+become the companion of your whole catalogue.
+
+= Does it work with High-Performance Order Storage? =
+
+Yes. It reads orders from the HPOS tables directly.
+
+== Screenshots ==
+
+1. The Analysis tab: match rate, stat tiles and recommendations.
+2. The category editor, one product per row.
+3. The suggestion block as customers see it.
+
+== Changelog ==
+
+= 1.0.0 =
+* First public release.
