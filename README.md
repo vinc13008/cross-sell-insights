@@ -145,6 +145,29 @@ la clé doit exister pour que le traitement distingue « champ absent » de
 croisées et montées en gamme de WooCommerce sont conservées : ce sont des
 données du site, pas de l'extension.
 
+Chaque enregistrement redirige vers l'écran avec un paramètre de confirmation
+(`recos=`, `edites=`, `exclus=1`, `muets=1`, `regles=1`, `masse=`, `annule=`,
+`recalcul=1`), lu et affiché par `notices()`. Un redirect silencieux ne dit
+rien de ce qui vient de se passer ; ces paramètres n'ont aucun effet de bord,
+ils ne font que choisir le message.
+
+Le bouton « Recalculer maintenant » vit sur l'onglet Analyse, mais sa
+redirection ne précisait pas l'onglet — un recalcul renvoyait vers l'onglet
+par défaut, cachant les chiffres qu'on venait justement de rafraîchir. Corrigé
+en fixant `&onglet=analyse` dans la redirection.
+
+Les tuiles de l'onglet Analyse sont des ancres vers la section qui explique le
+chiffre (`#bit-calcul`, `#bit-recommandations`) : un résumé n'a d'intérêt que
+si on peut creuser sans chercher où regarder. La jauge de correspondance
+s'anime au chargement plutôt que de s'afficher pré-remplie — deux passages par
+`requestAnimationFrame` avant de porter sa largeur à la valeur réelle, pour que
+le remplissage se lise comme une réponse plutôt qu'un simple fait. Respecte
+`prefers-reduced-motion`.
+
+Le panneau d'attribution en masse de l'éditeur par catégorie reste visible en
+défilant une longue liste (`position: sticky`), pour ne pas forcer un
+aller-retour en haut de page à chaque application.
+
 ## Compatibilité
 
 WooCommerce avec stockage HPOS (`wp_wc_orders`), PHP 8.0+, WordPress 6.0+.

@@ -3,8 +3,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: BuyIt Together 1.0.0\n"
-"POT-Creation-Date: 2026-08-23T00:00:00+00:00\n"
-"PO-Revision-Date: 2026-08-23T00:00:00+00:00\n"
+"POT-Creation-Date: 2026-08-24T00:00:00+00:00\n"
+"PO-Revision-Date: 2026-08-24T00:00:00+00:00\n"
 "Last-Translator: POWERLOOP\n"
 "Language-Team: Français\n"
 "Language: fr_FR\n"
@@ -23,6 +23,29 @@ msgid "%d product page is excluded from recommendations."
 msgid_plural "%d product pages are excluded from recommendations."
 msgstr[0] "%d fiche est retirée des recommandations."
 msgstr[1] "%d fiches sont retirées des recommandations."
+
+msgid "%d recommendation applied to your cross-sells."
+msgid_plural "%d recommendations applied to your cross-sells."
+msgstr[0] "%d association appliquée à vos ventes croisées."
+msgstr[1] "%d associations appliquées à vos ventes croisées."
+
+msgid "%d product updated."
+msgid_plural "%d products updated."
+msgstr[0] "%d produit mis à jour."
+msgstr[1] "%d produits mis à jour."
+
+msgid "%d product restored to its previous cross-sells."
+msgid_plural "%d products restored to their previous cross-sells."
+msgstr[0] "%d produit restauré à ses ventes croisées précédentes."
+msgstr[1] "%d produits restaurés à leurs ventes croisées précédentes."
+
+msgctxt "one row selected"
+msgid "%d selected"
+msgstr "%d sélectionné"
+
+msgctxt "several rows selected"
+msgid "%d selected"
+msgstr "%d sélectionnés"
 
 msgid "Frequently bought with this part"
 msgstr "Souvent commandé avec cette pièce"
@@ -371,3 +394,30 @@ msgstr "Choisissez d'abord un produit."
 
 msgid "field(s) changed — remember to save."
 msgstr "champ(s) modifié(s) — pensez à enregistrer."
+
+msgid "Calculation refreshed — see the numbers below."
+msgstr "Calcul actualisé — les chiffres ci-dessous sont à jour."
+
+msgid "Choose at least one cross-sell product to add, and a category, tag or product to apply it to."
+msgstr "Choisissez au moins un produit à ajouter en vente croisée, et une catégorie, une étiquette ou des produits auxquels l'appliquer."
+
+msgid "Exclusions saved."
+msgstr "Exclusions enregistrées."
+
+msgid "No product matched your selection."
+msgstr "Aucun produit ne correspond à votre sélection."
+
+msgid "Nothing to apply: the selected pairs were already configured."
+msgstr "Rien à appliquer : les paires sélectionnées étaient déjà configurées."
+
+msgid "Nothing to undo."
+msgstr "Rien à annuler."
+
+msgid "Recalculating…"
+msgstr "Calcul en cours…"
+
+msgid "Rules saved."
+msgstr "Règles enregistrées."
+
+msgid "Saved. These product pages are out of the recommendations table."
+msgstr "Enregistré. Ces fiches produit sont retirées du tableau de recommandations."

@@ -3,7 +3,7 @@
  * Plugin Name:       BuyIt Together
  * Plugin URI:        https://github.com/vinc13008/buyit-together
  * Description:       Shows on each product page the parts customers actually bought with it, deduced from your order history. No per-product setup: associations are recalculated weekly.
- * Version:           1.0.0
+ * Version:           1.1.0
  * Requires at least: 6.0
  * Requires PHP:      8.0
  * Author:            POWERLOOP
@@ -594,7 +594,16 @@ final class BuyIt_Together {
 		self::styles();
 		?>
 		<div class="wrap bit-wrap">
-			<h1><?php esc_html_e( 'BuyIt Together', 'buyit-together' ); ?></h1>
+			<h1 class="bit-marque">
+				<svg class="bit-marque__logo" viewBox="0 0 40 40" width="28" height="28" aria-hidden="true" focusable="false">
+					<circle cx="15.5" cy="20" r="8.5" fill="#2271b1"></circle>
+					<circle cx="24.5" cy="20" r="8.5" fill="#f0a30a"></circle>
+					<path d="M 20,12.05 A 8.5,8.5 0 0 1 20,27.95 A 8.5,8.5 0 0 1 20,12.05 Z" fill="#fff"></path>
+				</svg>
+				<?php esc_html_e( 'BuyIt Together', 'buyit-together' ); ?>
+			</h1>
+
+			<?php self::notices(); ?>
 
 			<nav class="nav-tab-wrapper wp-clearfix">
 				<a href="<?php echo esc_url( $base . '&onglet=analyse' ); ?>"
@@ -633,15 +642,6 @@ final class BuyIt_Together {
 	}
 
 	/**
-	 * Habillage de l'écran d'administration.
-	 *
-	 * On reste dans le langage visuel de WordPress — mêmes neutres, mêmes rayons,
-	 * même typographie — et on n'ajoute de la couleur que là où elle porte un sens :
-	 * l'état du diagnostic. Les teintes de statut sont sous-contrastées sur fond
-	 * clair par construction ; elles sont donc toujours accompagnées d'une icône
-	 * et d'un libellé, jamais laissées seules à porter l'information.
-	 */
-	/**
 	 * Nom de produit cliquable, menant à l'éditeur filtré sur ce seul produit.
 	 *
 	 * Les tableaux de résultats désignent des produits qu'on veut corriger tout
@@ -672,12 +672,121 @@ final class BuyIt_Together {
 		);
 	}
 
+	/**
+	 * Confirmation de la dernière action, juste sous le titre.
+	 *
+	 * Chaque formulaire redirige après enregistrement plutôt que de laisser un
+	 * POST rejouable au rafraîchissement — mais un redirect silencieux ne dit
+	 * rien de ce qui vient de se passer. Ces paramètres sont ceux que chaque
+	 * gestionnaire dépose dans son URL de retour ; aucun n'a d'effet de bord,
+	 * ils ne font que choisir quel message afficher.
+	 */
+	private static function notices(): void {
+		$messages = [];
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only navigation parameter, no state change.
+		if ( isset( $_GET['recos'] ) ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only navigation parameter, no state change.
+			$n = absint( $_GET['recos'] );
+			$messages[] = $n
+				/* translators: %d: number of recommendations applied */
+				? sprintf( _n( '%d recommendation applied to your cross-sells.', '%d recommendations applied to your cross-sells.', $n, 'buyit-together' ), $n )
+				: __( 'Nothing to apply: the selected pairs were already configured.', 'buyit-together' );
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only navigation parameter, no state change.
+		if ( isset( $_GET['edites'] ) ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only navigation parameter, no state change.
+			$n = absint( $_GET['edites'] );
+			/* translators: %d: number of products updated */
+			$messages[] = sprintf( _n( '%d product updated.', '%d products updated.', $n, 'buyit-together' ), $n );
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only navigation parameter, no state change.
+		if ( isset( $_GET['exclus'] ) ) {
+			$messages[] = __( 'Exclusions saved.', 'buyit-together' );
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only navigation parameter, no state change.
+		if ( isset( $_GET['muets'] ) ) {
+			$messages[] = __( 'Saved. These product pages are out of the recommendations table.', 'buyit-together' );
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only navigation parameter, no state change.
+		if ( isset( $_GET['regles'] ) ) {
+			$messages[] = __( 'Rules saved.', 'buyit-together' );
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only navigation parameter, no state change.
+		if ( isset( $_GET['masse'] ) ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only navigation parameter, no state change.
+			$valeur = sanitize_text_field( wp_unslash( $_GET['masse'] ) );
+			if ( 'vide' === $valeur ) {
+				$messages[] = __( 'Choose at least one cross-sell product to add, and a category, tag or product to apply it to.', 'buyit-together' );
+			} elseif ( '0' === $valeur ) {
+				$messages[] = __( 'No product matched your selection.', 'buyit-together' );
+			} else {
+				$n = absint( $valeur );
+				/* translators: %d: number of products updated */
+				$messages[] = sprintf( _n( '%d product updated.', '%d products updated.', $n, 'buyit-together' ), $n );
+			}
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only navigation parameter, no state change.
+		if ( isset( $_GET['annule'] ) ) {
+			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only navigation parameter, no state change.
+			$n = absint( $_GET['annule'] );
+			$messages[] = $n
+				/* translators: %d: number of products restored */
+				? sprintf( _n( '%d product restored to its previous cross-sells.', '%d products restored to their previous cross-sells.', $n, 'buyit-together' ), $n )
+				: __( 'Nothing to undo.', 'buyit-together' );
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only navigation parameter, no state change.
+		if ( isset( $_GET['recalcul'] ) ) {
+			$messages[] = __( 'Calculation refreshed — see the numbers below.', 'buyit-together' );
+		}
+
+		foreach ( $messages as $message ) {
+			printf(
+				'<div class="notice notice-success is-dismissible"><p>%s</p></div>',
+				esc_html( $message )
+			);
+		}
+	}
+
+	/**
+	 * Habillage de l'écran d'administration.
+	 *
+	 * On reste dans le langage visuel de WordPress — mêmes neutres, mêmes rayons,
+	 * même typographie — et on n'ajoute de la couleur que là où elle porte un sens :
+	 * l'état du diagnostic. Les teintes de statut sont sous-contrastées sur fond
+	 * clair par construction ; elles sont donc toujours accompagnées d'une icône
+	 * et d'un libellé, jamais laissées seules à porter l'information.
+	 */
 	private static function styles(): void {
 		?>
 		<style>
 		.bit-wrap { --ae-encre:#1d2327; --ae-encre-2:#50575e; --ae-encre-3:#787c82;
 			--ae-bord:#dcdcde; --ae-fond:#fff; --ae-fond-2:#f6f7f7; --ae-accent:#2271b1;
-			--ae-bon:#0ca30c; --ae-attention:#fab219; --ae-serieux:#ec835a; --ae-critique:#d03b3b; }
+			--ae-bon:#0ca30c; --ae-attention:#fab219; --ae-serieux:#ec835a; --ae-critique:#d03b3b;
+			--ae-ressort:cubic-bezier(.23,1,.32,1); }
+
+		/* --- Marque ---------------------------------------------------------
+		   Même dessin que l'icône du dépôt : deux produits, l'intersection est
+		   ce qui s'achète ensemble. Le retrouver ici referme la boucle entre
+		   la fiche du dépôt et l'écran qu'on utilise vraiment. */
+		.bit-marque { display:flex; align-items:center; gap:10px; }
+		.bit-marque__logo { flex:0 0 auto; }
+
+		/* --- Retour tactile : les boutons et onglets répondent à la pression,
+		   pas seulement au survol — l'interface montre qu'elle a entendu. */
+		.bit-wrap .button, .bit-wrap .nav-tab, .bit-tuile {
+			transition:transform 140ms var(--ae-ressort), border-color 140ms ease, background-color 140ms ease; }
+		.bit-wrap .button:active, .bit-wrap .nav-tab:active { transform:scale(.97); }
+		@media (prefers-reduced-motion:reduce) {
+			.bit-wrap .button, .bit-wrap .nav-tab, .bit-tuile, .bit-jauge__part { transition:none !important; }
+		}
 
 		/* --- Bandeau de tête --------------------------------------------- */
 		.bit-tete { display:flex; flex-wrap:wrap; gap:24px; align-items:flex-start;
@@ -692,7 +801,8 @@ final class BuyIt_Together {
 		.bit-jauge { flex:1 1 260px; min-width:240px; align-self:center; }
 		.bit-jauge__piste { height:10px; border-radius:5px; overflow:hidden;
 			background:color-mix(in srgb, var(--ae-teinte) 18%, #fff); }
-		.bit-jauge__part { height:100%; background:var(--ae-teinte); border-radius:5px 0 0 5px; }
+		.bit-jauge__part { height:100%; background:var(--ae-teinte); border-radius:5px 0 0 5px;
+			width:0; transition:width 700ms var(--ae-ressort); }
 		.bit-jauge__note { margin-top:8px; font-size:12px; color:var(--ae-encre-3); }
 
 		/* --- Pastille d'état : couleur + icône + libellé ------------------ */
@@ -705,9 +815,13 @@ final class BuyIt_Together {
 		.bit-tuiles { display:grid; gap:12px; margin:0 0 24px;
 			grid-template-columns:repeat(auto-fit,minmax(168px,1fr)); }
 		.bit-tuile { background:var(--ae-fond); border:1px solid var(--ae-bord);
-			border-radius:6px; padding:14px 16px; }
+			border-radius:6px; padding:14px 16px; display:block; text-decoration:none; }
 		.bit-tuile__valeur { font-size:26px; font-weight:600; line-height:1.15; color:var(--ae-encre); }
 		.bit-tuile__label { margin-top:3px; font-size:12px; color:var(--ae-encre-2); }
+		/* Tuile = raccourci vers la section qui en dit plus, pas juste un chiffre. */
+		a.bit-tuile:hover { border-color:var(--ae-accent); transform:translateY(-1px); }
+		a.bit-tuile:active { transform:scale(.98) translateY(0); }
+		@media (prefers-reduced-motion:reduce) { a.bit-tuile:hover { transform:none; } }
 
 		/* --- Sections ----------------------------------------------------- */
 		.bit-section { background:var(--ae-fond); border:1px solid var(--ae-bord);
@@ -727,7 +841,10 @@ final class BuyIt_Together {
 
 		/* --- Éditeur de catégorie ------------------------------------------ */
 		.bit-groupe { background:var(--ae-fond); border:1px solid var(--ae-bord);
-			border-radius:6px; padding:16px 18px; margin:0 0 16px; }
+			border-radius:6px; padding:16px 18px; margin:0 0 16px;
+			/* Reste atteignable en bas d'une longue catégorie plutôt que
+			   forcer un aller-retour en haut de page pour l'appliquer. */
+			position:sticky; top:calc(var(--wp-admin--admin-bar--height, 32px) + 12px); z-index:10; }
 		.bit-groupe .description { color:var(--ae-encre-3); }
 		.bit-defile { border:1px solid var(--ae-bord); border-radius:6px;
 			background:var(--ae-fond); }
@@ -789,7 +906,13 @@ final class BuyIt_Together {
 			</div>
 			<div class="bit-jauge">
 				<div class="bit-jauge__piste">
-					<div class="bit-jauge__part" style="width:<?php echo esc_attr( max( 1, min( 100, $taux ) ) ); ?>%"></div>
+					<?php
+					// Largeur posée à 0 dans le balisage ; un script la porte à sa
+					// valeur juste après, pour que le remplissage se lise comme la
+					// réponse à une question plutôt qu'un simple fait affiché.
+					$largeur_cible = max( 1, min( 100, $taux ) );
+					?>
+					<div class="bit-jauge__part" data-taux="<?php echo esc_attr( $largeur_cible ); ?>"></div>
 				</div>
 				<p class="bit-jauge__note">
 					<?php printf(
@@ -805,6 +928,25 @@ final class BuyIt_Together {
 				</p>
 			</div>
 		</div>
+		<script>
+		( function () {
+			var jauge = document.querySelector( '.bit-jauge__part' );
+			if ( ! jauge ) { return; }
+			var reduit = window.matchMedia( '(prefers-reduced-motion: reduce)' ).matches;
+			if ( reduit ) {
+				jauge.style.width = jauge.dataset.taux + '%';
+				return;
+			}
+			// Deux passages par requestAnimationFrame : le premier laisse le
+			// navigateur peindre la largeur à 0, le second déclenche la
+			// transition CSS vers la vraie valeur plutôt que de la court-circuiter.
+			requestAnimationFrame( function () {
+				requestAnimationFrame( function () {
+					jauge.style.width = jauge.dataset.taux + '%';
+				} );
+			} );
+		} )();
+		</script>
 
 		<?php
 		$nb_exclus = count( self::exclus() );
@@ -829,26 +971,32 @@ final class BuyIt_Together {
 			</p>
 		<?php endif; ?>
 
+		<?php
+		// Chaque tuile mène à la section qui explique le chiffre : un résumé
+		// n'a d'intérêt que si on peut creuser sans chercher où regarder.
+		$vers_calcul = '#bit-calcul';
+		$vers_recos  = '#bit-recommandations';
+		?>
 		<div class="bit-tuiles">
-			<div class="bit-tuile">
+			<a class="bit-tuile" href="<?php echo esc_url( $vers_calcul ); ?>">
 				<div class="bit-tuile__valeur"><?php echo esc_html( number_format_i18n( (int) $a['total'] ) ); ?></div>
 				<div class="bit-tuile__label"><?php esc_html_e( 'Cross-sells configured', 'buyit-together' ); ?></div>
-			</div>
-			<div class="bit-tuile">
+			</a>
+			<a class="bit-tuile" href="<?php echo esc_url( $vers_calcul ); ?>">
 				<div class="bit-tuile__valeur"><?php echo esc_html( number_format_i18n( (int) $a['confirmees'] ) ); ?></div>
 				<div class="bit-tuile__label"><?php esc_html_e( 'Confirmed by your sales', 'buyit-together' ); ?></div>
-			</div>
-			<div class="bit-tuile">
+			</a>
+			<a class="bit-tuile" href="<?php echo esc_url( $vers_recos ); ?>">
 				<div class="bit-tuile__valeur"><?php echo esc_html( number_format_i18n( (int) $a['recos_tot'] ) ); ?></div>
 				<div class="bit-tuile__label"><?php esc_html_e( 'Corrections suggested', 'buyit-together' ); ?></div>
-			</div>
-			<div class="bit-tuile">
+			</a>
+			<a class="bit-tuile" href="<?php echo esc_url( $vers_calcul ); ?>">
 				<div class="bit-tuile__valeur"><?php echo esc_html( number_format_i18n( (int) ( $info['produits'] ?? 0 ) ) ); ?></div>
 				<div class="bit-tuile__label"><?php esc_html_e( 'Products with suggestions', 'buyit-together' ); ?></div>
-			</div>
+			</a>
 		</div>
 
-		<div class="bit-section">
+		<div class="bit-section" id="bit-calcul">
 		<h2><?php esc_html_e( 'Association calculation', 'buyit-together' ); ?></h2>
 		<p><?php esc_html_e( "Counts product pairs appearing in the same order over the last 12 months. Recalculated weekly, and feeds the product page suggestions.", 'buyit-together' ); ?></p>
 		<?php if ( ! empty( $info['date'] ) ) : ?>
@@ -865,11 +1013,23 @@ final class BuyIt_Together {
 		<?php else : ?>
 			<p><em><?php esc_html_e( 'No calculation has been run yet.', 'buyit-together' ); ?></em></p>
 		<?php endif; ?>
-		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" id="bit-form-recalcul">
 			<input type="hidden" name="action" value="bit_recalcul">
 			<?php wp_nonce_field( 'bit_recalcul' ); ?>
 			<?php submit_button( __( 'Recalculate now', 'buyit-together' ), 'secondary' ); ?>
 		</form>
+		<script>
+		// Sur un gros catalogue le calcul prend quelques secondes : sans retour,
+		// un clic de plus semble naturel — et double le travail pour rien.
+		document.getElementById( 'bit-form-recalcul' )?.addEventListener( 'submit', function ( e ) {
+			var bouton = e.target.querySelector( 'button[type="submit"], input[type="submit"]' );
+			if ( ! bouton || bouton.disabled ) { return; }
+			bouton.disabled = true;
+			bouton.dataset.texteOrigine = bouton.value || bouton.textContent;
+			var enCours = '<?php echo esc_js( __( 'Recalculating…', 'buyit-together' ) ); ?>';
+			if ( 'value' in bouton ) { bouton.value = enCours; } else { bouton.textContent = enCours; }
+		} );
+		</script>
 
 		<h3><?php esc_html_e( 'Products never to suggest elsewhere', 'buyit-together' ); ?></h3>
 		<p><?php esc_html_e( "A consumable, a free gift or an end-of-life part shows up in almost every order: it becomes the companion of your whole catalogue without saying anything useful. Products listed here are removed from the calculation and never appear in suggestions, even if they were added by hand or by a rule.", 'buyit-together' ); ?></p>
@@ -928,7 +1088,7 @@ final class BuyIt_Together {
 		}
 		?>
 
-		<div class="bit-section">
+		<div class="bit-section" id="bit-recommandations">
 		<h2><?php esc_html_e( 'Recommendations', 'buyit-together' ); ?></h2>
 		<?php if ( ! empty( $a['recos'] ) ) : ?>
 			<p>
@@ -962,12 +1122,43 @@ final class BuyIt_Together {
 					</tbody>
 				</table>
 				<p class="description"><?php esc_html_e( "The plugin adds these products to WooCommerce cross-sells. The operation can be undone from the Cart tab.", 'buyit-together' ); ?></p>
-				<?php submit_button( __( 'Apply selection', 'buyit-together' ) ); ?>
+				<p class="submit" style="display:flex;align-items:center;gap:.8em">
+					<?php submit_button( __( 'Apply selection', 'buyit-together' ), 'primary', 'submit', false ); ?>
+					<span id="bit-compte" class="description" aria-live="polite"></span>
+				</p>
 			</form>
+			<?php
+			// Les deux formes restent au singulier « %d » côté PHP : c'est le
+			// script qui choisit laquelle utiliser et fait lui-même le remplacement.
+			// Une chaîne français comme « sélectionné » prend un accord au pluriel
+			// que l'anglais ne marque pas — les figer à l'avance aurait été faux.
+			/* translators: %d: number of selected rows (singular form) */
+			$libelle_un        = _n( '%d selected', '%d selected', 1, 'buyit-together' );
+			/* translators: %d: number of selected rows (plural form) */
+			$libelle_plusieurs = _n( '%d selected', '%d selected', 2, 'buyit-together' );
+			?>
 			<script>
-			jQuery( '#bit-tout' ).on( 'change', function () {
-				jQuery( 'input[name="reco[]"]' ).prop( 'checked', this.checked );
-			} );
+			( function () {
+				// Combien de lignes va vraiment toucher « Appliquer » : la case
+				// « tout cocher » ne le dit pas, et 25 lignes se comptent mal à l'œil.
+				var cases  = document.querySelectorAll( 'input[name="reco[]"]' );
+				var compte = document.getElementById( 'bit-compte' );
+				var tout   = document.getElementById( 'bit-tout' );
+				var libUn        = '<?php echo esc_js( $libelle_un ); ?>';
+				var libPlusieurs = '<?php echo esc_js( $libelle_plusieurs ); ?>';
+
+				function rafraichir() {
+					var n = document.querySelectorAll( 'input[name="reco[]"]:checked' ).length;
+					compte.textContent = n
+						? ( 1 === n ? libUn : libPlusieurs ).replace( '%d', n )
+						: '';
+				}
+				tout?.addEventListener( 'change', function () {
+					cases.forEach( function ( c ) { c.checked = tout.checked; } );
+					rafraichir();
+				} );
+				cases.forEach( function ( c ) { c.addEventListener( 'change', rafraichir ); } );
+			} )();
 			</script>
 		<?php else : ?>
 			<p><em><?php esc_html_e( 'No missing association: your configuration matches your sales.', 'buyit-together' ); ?></em></p>
@@ -1945,7 +2136,7 @@ final class BuyIt_Together {
 
 		self::recalculer();
 
-		wp_safe_redirect( admin_url( 'admin.php?page=buyit-together&recalcul=1' ) );
+		wp_safe_redirect( admin_url( 'admin.php?page=buyit-together&onglet=analyse&recalcul=1' ) );
 		exit;
 	}
 }

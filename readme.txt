@@ -4,7 +4,7 @@ Tags: woocommerce, cross-sells, related products, upsell, recommendations
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 1.0.0
+Stable tag: 1.1.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -96,6 +96,16 @@ Yes. It reads orders from the HPOS tables directly.
 3. The suggestion block as customers see it.
 
 == Changelog ==
+
+= 1.1.0 =
+* Brand mark added next to the screen title, matching the plugin directory icon.
+* A confirmation now appears after every save — applying recommendations, saving exclusions, bulk assignment, undo, and recalculation all previously redirected silently.
+* Stat tiles on the Analysis tab are now shortcuts to the section that explains them.
+* The match-rate meter animates in on page load instead of appearing pre-filled.
+* The recommendations table shows a live count of selected rows.
+* The "Recalculate now" button disables itself and shows progress while a large catalogue is being processed, preventing an accidental double submission.
+* Fixed: recalculating from the Analysis tab dropped back to a different tab, hiding the very numbers the calculation had just refreshed.
+* The bulk-assignment panel in the category editor stays in view while scrolling a long list.
 
 = 1.0.0 =
 * First public release.
