@@ -223,6 +223,27 @@ automatiquement aux couleurs de mon thème ») bascule vers trois couleurs
 fixes ; elle reste réversible — recocher la case revient à la détection
 automatique même après avoir enregistré des couleurs fixes.
 
+Pas de défilement, ni sur la liste ni sur la fenêtre elle-même — une fenêtre à
+taille fixe ne peut pas simplement s'allonger pour accueillir une liste
+ouverte. Deux décisions en découlent :
+
+- **Vignettes à taille fixe** (56×56 px), et non dimensionnées d'après la
+  colonne. Une vraie photo produit n'est pas toujours carrée — deux pièces
+  côte à côte, un gros plan tout en longueur — et la faire suivre la largeur
+  de sa colonne gonflait la carte bien au-delà de ce que son contenu exige,
+  ce qui rendait la fenêtre trop haute pour tenir sans défiler. Repéré en
+  testant avec de vraies photos non carrées plutôt qu'avec des vignettes déjà
+  carrées.
+- **Plafonné à `NB_MODAL` suggestions** (4 par défaut, filtre `bit_nb_modal`),
+  appliqué dans `afficher_modal()` — pas dans `suggestions_pour()`, dont le
+  bloc de fiche se sert aussi et qui peut se permettre une liste plus longue
+  puisqu'il fait simplement grandir la page.
+
+Chaque nom de produit est plafonné à deux lignes (`-webkit-line-clamp`), avec
+une hauteur toujours réservée pour ces deux lignes même sur un nom court : les
+cartes restent de la même taille quel que soit le nom réel du produit, pas
+seulement les noms de test courts.
+
 ## Compatibilité
 
 WooCommerce avec stockage HPOS (`wp_wc_orders`), PHP 8.0+, WordPress 6.0+.

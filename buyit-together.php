@@ -3,7 +3,7 @@
  * Plugin Name:       BuyIt Together
  * Plugin URI:        https://github.com/vinc13008/buyit-together
  * Description:       Shows on each product page the parts customers actually bought with it, deduced from your order history. No per-product setup: associations are recalculated weekly.
- * Version:           1.3.1
+ * Version:           1.3.2
  * Requires at least: 6.0
  * Requires PHP:      8.0
  * Author:            POWERLOOP
@@ -39,6 +39,11 @@ final class BuyIt_Together {
 	private const NB_AFFICHES   = 3;   // compagnons montrés sur la fiche
 	private const MIN_PAIRES    = 2;   // occurrences minimales pour retenir une paire
 	private const FENETRE_JOURS = 365; // profondeur d'historique analysée
+	// La fenêtre a une taille fixe et pas de défilement : contrairement au bloc
+	// de fiche, elle ne peut pas simplement s'allonger si on lui donne trop de
+	// suggestions. `_bit_manuel` n'étant pas plafonné à la saisie, la limite se
+	// prend ici, à l'affichage.
+	private const NB_MODAL = 4;
 
 	public static function init(): void {
 		// Aucun chargement manuel du domaine de traduction : sur le dépôt
@@ -345,68 +350,69 @@ final class BuyIt_Together {
 	private static function css_modal(): string {
 		ob_start();
 		?>
-			.bit-modal { border: 0; padding: 0; max-width: 520px; width: calc(100% - 2em);
-				max-height: 88vh; overflow-y: auto; /* filet de sécurité seulement : avec une liste
-				normale, tout doit tenir sans faire défiler quoi que ce soit. */
+			.bit-modal { border: 0; padding: 0; max-width: 680px; width: calc(100% - 2em);
 				border-radius: var(--bit-rayon, 14px); background: var(--bit-fond, #fff); color: var(--bit-texte, #1d2327);
 				box-shadow: 0 24px 60px -16px rgba(0,0,0,.35), 0 4px 18px rgba(0,0,0,.14);
 				opacity: 1; transform: none;
 				transition: opacity 180ms ease-out, transform 180ms cubic-bezier(.23,1,.32,1); }
 			@starting-style { .bit-modal[open] { opacity: 0; transform: scale(.96) translateY(8px); } }
 			.bit-modal::backdrop { background: rgba(12,12,16,.55); backdrop-filter: blur(2px); }
-			.bit-modal__panneau { position: relative; padding: 1.8em 1.8em 1.6em; }
-			.bit-modal__fermer { position: absolute; top: .7em; right: .7em; width: 2.2em; height: 2.2em;
+			.bit-modal__panneau { position: relative; padding: 1.6em 1.7em 1.4em; }
+			.bit-modal__fermer { position: absolute; top: .6em; right: .6em; width: 2.2em; height: 2.2em;
 				display: flex; align-items: center; justify-content: center; border: 0; border-radius: 50%;
 				background: transparent; font-size: 1.3em; line-height: 1; cursor: pointer; color: inherit;
 				opacity: .55; transition: background-color 140ms ease, opacity 140ms ease; }
 			.bit-modal__fermer:hover { opacity: 1; background: color-mix(in srgb, var(--bit-texte, #1d2327) 8%, transparent); }
 			.bit-modal__ajoute { display: flex; align-items: center; flex-wrap: wrap; gap: .55em;
-				margin: 0 0 1.2em; padding-right: 2.2em; font-weight: 600; }
+				margin: 0 0 1em; padding-right: 2.2em; font-weight: 600; }
 			.bit-modal__coche { display: inline-flex; align-items: center; justify-content: center;
 				width: 1.5em; height: 1.5em; border-radius: 50%; background: var(--bit-accent, #1d2327); color: #fff;
 				font-size: .72em; flex: 0 0 auto; }
 			.bit-modal__compte { flex-basis: 100%; font-weight: 400; opacity: .65; font-size: .92em; }
-			.bit-modal__titre { font-size: 1.02em; margin: 0 0 .9em; }
-			.bit-modal__liste { list-style: none; margin: 0 0 1.3em; padding: 0; display: grid; gap: 1em; }
+			.bit-modal__titre { font-size: 1em; margin: 0 0 .8em; }
+			/* Ni sur la liste ni sur la fenêtre : aucun défilement interne. Les
+			   vignettes fixes et le format compact ci-dessous existent pour que le
+			   contenu tienne réellement, plutôt que de masquer le débordement
+			   derrière une barre de défilement. */
+			.bit-modal__liste { list-style: none; margin: 0 0 1.1em; padding: 0; display: grid; gap: .7em; }
 			.bit-modal__liste--ligne { grid-template-columns: 1fr; }
-			/* 150px minimum plutôt que 120 : à 120, un nom de produit réel (plus
-			   long que « Widget ») s'enroule sur 3-4 lignes inégales d'une carte à
-			   l'autre — la grille se rabat d'elle-même sur moins de colonnes. */
-			.bit-modal__liste--colonnes { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
-			.bit-modal__liste--ligne .bit-modal__item { display: flex; align-items: center; gap: .9em; }
+			.bit-modal__liste--colonnes { grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); }
+			.bit-modal__liste--ligne .bit-modal__item { display: flex; align-items: center; gap: .8em; }
 			.bit-modal__liste--ligne .bit-modal__item a:first-child { display: flex; align-items: center;
-				gap: .9em; flex: 1 1 auto; min-width: 0; text-decoration: none; color: inherit; }
-			.bit-modal__liste--ligne .bit-modal__item img { width: 56px; height: 56px; }
-			/* Colonne = carte : hauteur égale entre cartes d'une même rangée grâce à
-			   l'étirement par défaut de la grille, et le nom est plafonné à deux
-			   lignes pour que les rangées suivantes ne soient jamais déformées par
-			   une seule carte au nom trop long. Le bouton reste collé en bas
-			   (margin-top:auto) même quand le nom fait une ligne au lieu de deux. */
+				gap: .8em; flex: 1 1 auto; min-width: 0; text-decoration: none; color: inherit; }
+			/* Colonne = carte compacte : la vignette a une taille FIXE plutôt que de
+			   suivre la largeur de la colonne — une photo produit qui n'est pas
+			   carrée (deux pièces côte à côte, un gros plan tout en longueur…)
+			   gonflait sinon la case bien au-delà de ce que son contenu réel exige,
+			   c'est ce qui rendait la fenêtre trop haute pour tenir sans défiler.
+			   Le nom est plafonné à deux lignes, hauteur toujours réservée, pour que
+			   les cartes restent de la même taille quel que soit le nom réel ; le
+			   bouton reste collé en bas (margin-top:auto) même sur un nom court. */
 			.bit-modal__liste--colonnes .bit-modal__item { display: flex; flex-direction: column;
-				text-align: center; gap: .5em; }
+				align-items: center; text-align: center; gap: .4em; }
 			.bit-modal__liste--colonnes .bit-modal__item a:first-child { display: flex; flex-direction: column;
-				align-items: center; gap: .5em; flex: 1 1 auto; text-decoration: none; color: inherit; }
-			.bit-modal__liste--colonnes .bit-modal__item img { width: 100%; aspect-ratio: 1; }
+				align-items: center; gap: .4em; flex: 1 1 auto; text-decoration: none; color: inherit; }
+			.bit-modal__liste--colonnes .bit-modal__item img { width: 56px; height: 56px; }
 			.bit-modal__liste--colonnes .bit-modal__nom { display: -webkit-box; -webkit-line-clamp: 2;
-				-webkit-box-orient: vertical; overflow: hidden; min-height: calc(.92em * 1.35 * 2); }
+				-webkit-box-orient: vertical; overflow: hidden; min-height: calc(.8em * 1.3 * 2); }
 			.bit-modal__liste--colonnes .bit-modal__ajouter, .bit-modal__liste--colonnes .bit-modal__voir {
 				width: 100%; margin-top: auto; }
-			.bit-modal__item img { object-fit: cover; flex: 0 0 auto;
+			.bit-modal__item img { display: block; object-fit: cover; flex: 0 0 auto; width: 56px; height: 56px;
 				border-radius: max(4px, calc(var(--bit-rayon, 14px) * .5)); }
-			.bit-modal__nom { font-size: .92em; line-height: 1.35; }
-			.bit-modal__prix { display: block; font-size: .86em; font-weight: 700; color: var(--bit-accent, #1d2327);
-				margin-top: .2em; }
+			.bit-modal__nom { font-size: .8em; line-height: 1.3; }
+			.bit-modal__prix { display: block; font-size: .8em; font-weight: 700; color: var(--bit-accent, #1d2327);
+				margin-top: .15em; }
 			.bit-modal__ajouter, .bit-modal__voir, .bit-modal__pied .button {
-				flex: 0 0 auto; white-space: nowrap; border: 0; cursor: pointer; text-decoration: none;
-				display: inline-block; text-align: center; min-width: 84px;
+				box-sizing: border-box; flex: 0 0 auto; white-space: nowrap; border: 0; cursor: pointer;
+				text-decoration: none; display: inline-block; text-align: center; min-width: 118px;
 				background: var(--bit-accent, #1d2327); color: #fff; font-weight: 600;
-				font-size: .78em; padding: .42em .85em; border-radius: max(4px, calc(var(--bit-rayon, 14px) * .6));
+				font-size: .74em; padding: .5em .7em; border-radius: max(4px, calc(var(--bit-rayon, 14px) * .55));
 				transition: transform 140ms ease-out, opacity 140ms ease; }
 			.bit-modal__ajouter:hover, .bit-modal__voir:hover, .bit-modal__pied .button:hover { opacity: .88; }
 			.bit-modal__ajouter:active, .bit-modal__voir:active, .bit-modal__pied .button:active { transform: scale(.96); }
 			.bit-modal__ajouter[disabled] { opacity: .55; cursor: default; transform: none; }
 			.bit-modal__pied { display: flex; gap: 1em; align-items: center; justify-content: center; flex-wrap: wrap;
-				padding-top: 1.2em; border-top: 1px solid color-mix(in srgb, var(--bit-texte, #1d2327) 12%, transparent); }
+				padding-top: 1em; border-top: 1px solid color-mix(in srgb, var(--bit-texte, #1d2327) 12%, transparent); }
 			.bit-modal__continuer { background: none; border: 0; text-decoration: underline; cursor: pointer;
 				color: inherit; font-size: .9em; padding: 0; opacity: .75; }
 			.bit-modal__continuer:hover { opacity: 1; }
@@ -424,6 +430,11 @@ final class BuyIt_Together {
 			return; // un seul modal par page, même si le hook était appelé deux fois
 		}
 		$deja_affiche = true;
+
+		// Plafonné ici, pas dans suggestions_pour() : le bloc de fiche peut se
+		// permettre une liste plus longue (il fait simplement grandir la page),
+		// la fenêtre non — elle n'a ni la hauteur ni le défilement pour ça.
+		$produits = array_slice( $produits, 0, (int) apply_filters( 'bit_nb_modal', self::NB_MODAL ) );
 
 		$style = self::modal_style();
 

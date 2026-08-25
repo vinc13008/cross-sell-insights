@@ -4,7 +4,7 @@ Tags: woocommerce, cross-sells, related products, upsell, recommendations
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 1.3.1
+Stable tag: 1.3.2
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -96,6 +96,12 @@ Yes. It reads orders from the HPOS tables directly.
 3. The suggestion block as customers see it.
 
 == Changelog ==
+
+= 1.3.2 =
+* Fixed: a real (non-square) product photo — two parts side by side, a close-up, a long thin item — inflated its card far beyond what its content needed, which is what made the window tall enough to need scrolling in the first place. Thumbnails are now a fixed compact size, not sized from the image itself.
+* The window is now capped to 4 suggestions, regardless of how many are configured for the product — a fixed-size window with no internal scrolling cannot simply grow to fit an open-ended list. Filterable via `bit_nb_modal`.
+* Wider window, smaller cards: more suggestions fit in a single row instead of stacking into extra rows.
+* Add / View product buttons are now a guaranteed identical size in every layout, not just when the grid happened to make them match.
 
 = 1.3.1 =
 * Fixed: in the Columns layout, a real (longer) product name wrapped to three or four lines, throwing off the Add buttons' alignment from one card to the next. Names are now capped to two lines and cards keep the same height.
