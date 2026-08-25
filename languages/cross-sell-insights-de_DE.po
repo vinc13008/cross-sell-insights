@@ -14,9 +14,9 @@ msgstr ""
 
 #. Plugin Name of the plugin
 #: cross-sell-insights.php
-#: cross-sell-insights.php:1176
-#: cross-sell-insights.php:1177
-#: cross-sell-insights.php:1204
+#: cross-sell-insights.php:1540
+#: cross-sell-insights.php:1541
+#: cross-sell-insights.php:1568
 msgid "Cross-Sell Insights"
 msgstr ""
 
@@ -35,225 +35,258 @@ msgstr "Zeigt auf jeder Produktseite die Teile, die Kundinnen und Kunden tatsäc
 msgid "POWERLOOP"
 msgstr ""
 
-#: cross-sell-insights.php:382
-#: cross-sell-insights.php:949
-msgid "Frequently bought with this part"
-msgstr "Häufig zusammen mit diesem Teil gekauft"
+#: cross-sell-insights.php:423
+msgid "People also bought"
+msgstr "Andere kauften auch"
 
-#: cross-sell-insights.php:573
-msgid "Close"
-msgstr "Schließen"
+#: cross-sell-insights.php:446
+msgid "Total price:"
+msgstr "Gesamtpreis:"
 
-#: cross-sell-insights.php:596
-#: cross-sell-insights.php:1981
-msgid "Add"
-msgstr "Hinzufügen"
+#: cross-sell-insights.php:468
+msgid "This item:"
+msgstr "Dieser Artikel:"
 
-#: cross-sell-insights.php:600
-#: cross-sell-insights.php:2508
-msgid "View product"
-msgstr "Produkt ansehen"
+#: cross-sell-insights.php:479
+msgid "options to choose"
+msgstr "Optionen zu wählen"
 
-#: cross-sell-insights.php:607
-#: cross-sell-insights.php:1986
+#: cross-sell-insights.php:524
+msgid "Add this item to cart"
+msgstr "Diesen Artikel in den Warenkorb"
+
+#. translators: %d: number of items selected in the bundle
+#: cross-sell-insights.php:527
+#, php-format
+msgid "Add the %d items to cart"
+msgstr "Die %d Artikel in den Warenkorb"
+
+#: cross-sell-insights.php:529
+msgid "Select at least one item"
+msgstr "Wähle mindestens einen Artikel"
+
+#: cross-sell-insights.php:530
+#: cross-sell-insights.php:1089
+msgid "Adding…"
+msgstr "Wird hinzugefügt…"
+
+#: cross-sell-insights.php:531
+#: cross-sell-insights.php:1314
+msgid "Added to your cart."
+msgstr "Zu deinem Warenkorb hinzugefügt."
+
+#: cross-sell-insights.php:532
+#: cross-sell-insights.php:942
+#: cross-sell-insights.php:2352
 msgid "View cart"
 msgstr "Warenkorb ansehen"
 
-#: cross-sell-insights.php:608
-#: cross-sell-insights.php:1987
+#: cross-sell-insights.php:533
+#: cross-sell-insights.php:1001
+msgid "Could not add to cart. Please try again."
+msgstr "Konnte nicht zum Warenkorb hinzugefügt werden. Bitte versuche es erneut."
+
+#: cross-sell-insights.php:908
+msgid "Close"
+msgstr "Schließen"
+
+#: cross-sell-insights.php:931
+#: cross-sell-insights.php:2347
+msgid "Add"
+msgstr "Hinzufügen"
+
+#: cross-sell-insights.php:935
+#: cross-sell-insights.php:2874
+msgid "View product"
+msgstr "Produkt ansehen"
+
+#: cross-sell-insights.php:943
+#: cross-sell-insights.php:2353
 msgid "Continue shopping"
 msgstr "Weiter einkaufen"
 
 #. translators: %d: number of items in the cart
-#: cross-sell-insights.php:660
-#: cross-sell-insights.php:662
-#: cross-sell-insights.php:1967
+#: cross-sell-insights.php:995
+#: cross-sell-insights.php:997
+#: cross-sell-insights.php:2333
 #, php-format
 msgid "%d item in your cart."
 msgid_plural "%d items in your cart."
 msgstr[0] "%d Artikel in deinem Warenkorb."
 msgstr[1] "%d Artikel in deinem Warenkorb."
 
-#: cross-sell-insights.php:666
-msgid "Could not add to cart. Please try again."
-msgstr "Konnte nicht zum Warenkorb hinzugefügt werden. Bitte versuche es erneut."
-
-#: cross-sell-insights.php:754
-msgid "Adding…"
-msgstr "Wird hinzugefügt…"
-
-#: cross-sell-insights.php:784
+#: cross-sell-insights.php:1119
 msgid "Added"
 msgstr "Hinzugefügt"
 
-#: cross-sell-insights.php:950
-msgid "Added to your cart."
-msgstr "Zu deinem Warenkorb hinzugefügt."
+#: cross-sell-insights.php:1313
+msgid "Frequently bought with this part"
+msgstr "Häufig zusammen mit diesem Teil gekauft"
 
-#: cross-sell-insights.php:1003
+#: cross-sell-insights.php:1367
 msgid "Tag"
 msgstr "Schlagwort"
 
-#: cross-sell-insights.php:1003
+#: cross-sell-insights.php:1367
 msgid "Category"
 msgstr "Kategorie"
 
-#: cross-sell-insights.php:1131
-#: cross-sell-insights.php:2660
-#: cross-sell-insights.php:2761
-#: cross-sell-insights.php:2783
-#: cross-sell-insights.php:2804
-#: cross-sell-insights.php:2824
-#: cross-sell-insights.php:2852
-#: cross-sell-insights.php:2885
-#: cross-sell-insights.php:2995
-#: cross-sell-insights.php:3023
+#: cross-sell-insights.php:1495
+#: cross-sell-insights.php:3026
+#: cross-sell-insights.php:3127
+#: cross-sell-insights.php:3149
+#: cross-sell-insights.php:3170
+#: cross-sell-insights.php:3196
+#: cross-sell-insights.php:3224
+#: cross-sell-insights.php:3257
+#: cross-sell-insights.php:3367
+#: cross-sell-insights.php:3395
 msgid "Permission denied."
 msgstr "Zugriff verweigert."
 
-#: cross-sell-insights.php:1163
+#: cross-sell-insights.php:1527
 msgid "Recommendations applied"
 msgstr "Empfehlungen übernommen"
 
-#: cross-sell-insights.php:1212
+#: cross-sell-insights.php:1576
 msgid "Analysis"
 msgstr "Analyse"
 
-#: cross-sell-insights.php:1216
+#: cross-sell-insights.php:1580
 msgid "Product page suggestions"
 msgstr "Vorschläge auf der Produktseite"
 
-#: cross-sell-insights.php:1220
+#: cross-sell-insights.php:1584
 msgid "Cart cross-sells"
 msgstr "Cross-Sells im Warenkorb"
 
-#: cross-sell-insights.php:1224
-#: cross-sell-insights.php:2464
+#: cross-sell-insights.php:1588
+#: cross-sell-insights.php:2830
 msgid "Upsells"
 msgstr "Upsells"
 
-#: cross-sell-insights.php:1228
-#: cross-sell-insights.php:2727
+#: cross-sell-insights.php:1592
+#: cross-sell-insights.php:3093
 msgid "Category editor"
 msgstr "Kategorie-Editor"
 
-#: cross-sell-insights.php:1232
+#: cross-sell-insights.php:1596
 msgid "Settings"
 msgstr "Einstellungen"
 
-#: cross-sell-insights.php:1261
+#: cross-sell-insights.php:1625
 msgid "(deleted product)"
 msgstr "(gelöschtes Produkt)"
 
-#: cross-sell-insights.php:1276
+#: cross-sell-insights.php:1640
 msgid "Edit its suggestions and cross-sells"
 msgstr "Vorschläge und Cross-Sells bearbeiten"
 
 #. translators: %d: number of recommendations applied
-#: cross-sell-insights.php:1299
+#: cross-sell-insights.php:1663
 #, php-format
 msgid "%d recommendation applied to your cross-sells."
 msgid_plural "%d recommendations applied to your cross-sells."
 msgstr[0] "%d Empfehlung für deine Cross-Sells übernommen."
 msgstr[1] "%d Empfehlungen für deine Cross-Sells übernommen."
 
-#: cross-sell-insights.php:1300
+#: cross-sell-insights.php:1664
 msgid "Nothing to apply: the selected pairs were already configured."
 msgstr "Nichts zu übernehmen: Die ausgewählten Paare waren bereits eingerichtet."
 
 #. translators: %d: number of products updated
-#: cross-sell-insights.php:1308
-#: cross-sell-insights.php:1347
+#: cross-sell-insights.php:1672
+#: cross-sell-insights.php:1711
 #, php-format
 msgid "%d product updated."
 msgid_plural "%d products updated."
 msgstr[0] "%d Produkt aktualisiert."
 msgstr[1] "%d Produkte aktualisiert."
 
-#: cross-sell-insights.php:1313
+#: cross-sell-insights.php:1677
 msgid "Exclusions saved."
 msgstr "Ausschlüsse gespeichert."
 
-#: cross-sell-insights.php:1318
+#: cross-sell-insights.php:1682
 msgid "Saved. These product pages are out of the recommendations table."
 msgstr "Gespeichert. Diese Produktseiten stehen nicht mehr in der Empfehlungstabelle."
 
-#: cross-sell-insights.php:1323
+#: cross-sell-insights.php:1687
 msgid "Rules saved."
 msgstr "Regeln gespeichert."
 
-#: cross-sell-insights.php:1328
+#: cross-sell-insights.php:1692
 msgid "Saved."
 msgstr "Gespeichert."
 
-#: cross-sell-insights.php:1333
+#: cross-sell-insights.php:1697
 msgid "Window appearance saved."
 msgstr "Erscheinungsbild des Fensters gespeichert."
 
-#: cross-sell-insights.php:1341
+#: cross-sell-insights.php:1705
 msgid "Choose at least one cross-sell product to add, and a category, tag or product to apply it to."
 msgstr "Wähle mindestens ein Cross-Sell-Produkt zum Hinzufügen sowie eine Kategorie, ein Schlagwort oder ein Produkt, auf das es angewendet wird."
 
-#: cross-sell-insights.php:1343
+#: cross-sell-insights.php:1707
 msgid "No product matched your selection."
 msgstr "Kein Produkt entspricht deiner Auswahl."
 
 #. translators: %d: number of products restored
-#: cross-sell-insights.php:1357
+#: cross-sell-insights.php:1721
 #, php-format
 msgid "%d product restored to its previous cross-sells."
 msgid_plural "%d products restored to their previous cross-sells."
 msgstr[0] "%d Produkt auf seine vorherigen Cross-Sells zurückgesetzt."
 msgstr[1] "%d Produkte auf ihre vorherigen Cross-Sells zurückgesetzt."
 
-#: cross-sell-insights.php:1358
+#: cross-sell-insights.php:1722
 msgid "Nothing to undo."
 msgstr "Nichts rückgängig zu machen."
 
-#: cross-sell-insights.php:1363
+#: cross-sell-insights.php:1727
 msgid "Calculation refreshed — see the numbers below."
 msgstr "Berechnung aktualisiert – siehe die Zahlen unten."
 
-#: cross-sell-insights.php:1505
+#: cross-sell-insights.php:1869
 msgid "No cross-sells configured"
 msgstr "Keine Cross-Sells eingerichtet"
 
-#: cross-sell-insights.php:1508
+#: cross-sell-insights.php:1872
 msgid "Configuration unrelated to your sales"
 msgstr "Einrichtung ohne Bezug zu deinen Verkäufen"
 
-#: cross-sell-insights.php:1511
+#: cross-sell-insights.php:1875
 msgid "Weak match"
 msgstr "Schwache Übereinstimmung"
 
-#: cross-sell-insights.php:1514
+#: cross-sell-insights.php:1878
 msgid "Partial match"
 msgstr "Teilweise Übereinstimmung"
 
-#: cross-sell-insights.php:1517
+#: cross-sell-insights.php:1881
 msgid "Configuration matches your sales"
 msgstr "Einrichtung passt zu deinen Verkäufen"
 
-#: cross-sell-insights.php:1521
+#: cross-sell-insights.php:1885
 msgid "What your sales say. Nothing to configure here: the suggested corrections can be applied, but configuration happens in the other tabs."
 msgstr "Was deine Verkäufe zeigen. Hier gibt es nichts einzurichten: Die vorgeschlagenen Korrekturen lassen sich übernehmen, die Einrichtung erfolgt aber in den anderen Reitern."
 
-#: cross-sell-insights.php:1527
+#: cross-sell-insights.php:1891
 msgid "of your cross-sells match a real purchase"
 msgstr "deiner Cross-Sells entsprechen einem tatsächlichen Kauf"
 
 #. translators: 1: confirmed associations, 2: configured cross-sells, 3: orders analysed
-#: cross-sell-insights.php:1546
+#: cross-sell-insights.php:1910
 #, php-format
 msgid "%1$d associations confirmed out of %2$d configured, measured across %3$d orders from the last 12 months."
 msgstr "%1$d von %2$d eingerichteten Verknüpfungen bestätigt, gemessen an %3$d Bestellungen der letzten 12 Monate."
 
-#: cross-sell-insights.php:1552
+#: cross-sell-insights.php:1916
 msgid "Run the analysis again"
 msgstr "Analyse erneut ausführen"
 
 #. translators: %d: number of products excluded from suggestions
-#: cross-sell-insights.php:1586
+#: cross-sell-insights.php:1950
 #, php-format
 msgid "%d product is never suggested elsewhere."
 msgid_plural "%d products are never suggested elsewhere."
@@ -261,525 +294,529 @@ msgstr[0] "%d Produkt wird nirgendwo sonst vorgeschlagen."
 msgstr[1] "%d Produkte werden nirgendwo sonst vorgeschlagen."
 
 #. translators: %d: number of product pages excluded from recommendations
-#: cross-sell-insights.php:1593
+#: cross-sell-insights.php:1957
 #, php-format
 msgid "%d product page is excluded from recommendations."
 msgid_plural "%d product pages are excluded from recommendations."
 msgstr[0] "%d Produktseite ist von den Empfehlungen ausgenommen."
 msgstr[1] "%d Produktseiten sind von den Empfehlungen ausgenommen."
 
-#: cross-sell-insights.php:1609
+#: cross-sell-insights.php:1973
 msgid "Cross-sells configured"
 msgstr "Eingerichtete Cross-Sells"
 
-#: cross-sell-insights.php:1613
+#: cross-sell-insights.php:1977
 msgid "Confirmed by your sales"
 msgstr "Durch deine Verkäufe bestätigt"
 
-#: cross-sell-insights.php:1617
+#: cross-sell-insights.php:1981
 msgid "Corrections suggested"
 msgstr "Vorgeschlagene Korrekturen"
 
-#: cross-sell-insights.php:1621
+#: cross-sell-insights.php:1985
 msgid "Products with suggestions"
 msgstr "Produkte mit Vorschlägen"
 
-#: cross-sell-insights.php:1626
+#: cross-sell-insights.php:1990
 msgid "Association calculation"
 msgstr "Berechnung der Verknüpfungen"
 
-#: cross-sell-insights.php:1627
+#: cross-sell-insights.php:1991
 msgid "Counts product pairs appearing in the same order over the last 12 months. Recalculated weekly, and feeds the product page suggestions."
 msgstr "Zählt Produktpaare, die in denselben Bestellungen der letzten 12 Monate vorkommen. Wird wöchentlich neu berechnet und speist die Vorschläge auf der Produktseite."
 
-#: cross-sell-insights.php:1630
+#: cross-sell-insights.php:1994
 msgid "Last calculation:"
 msgstr "Letzte Berechnung:"
 
 #. translators: 1: products with associations, 2: orders the calculation used
-#: cross-sell-insights.php:1634
+#: cross-sell-insights.php:1998
 #, php-format
 msgid "%1$d products associated, from %2$d orders."
 msgstr "%1$d Produkte verknüpft, aus %2$d Bestellungen."
 
-#: cross-sell-insights.php:1640
+#: cross-sell-insights.php:2004
 msgid "No calculation has been run yet."
 msgstr "Es wurde noch keine Berechnung ausgeführt."
 
-#: cross-sell-insights.php:1645
+#: cross-sell-insights.php:2009
 msgid "Recalculate now"
 msgstr "Jetzt neu berechnen"
 
-#: cross-sell-insights.php:1655
+#: cross-sell-insights.php:2019
 msgid "Recalculating…"
 msgstr "Wird neu berechnet…"
 
-#: cross-sell-insights.php:1660
+#: cross-sell-insights.php:2024
 msgid "Products never to suggest elsewhere"
 msgstr "Produkte, die nirgendwo sonst vorgeschlagen werden sollen"
 
-#: cross-sell-insights.php:1661
+#: cross-sell-insights.php:2025
 msgid "A consumable, a free gift or an end-of-life part shows up in almost every order: it becomes the companion of your whole catalogue without saying anything useful. Products listed here are removed from the calculation and never appear in suggestions, even if they were added by hand or by a rule."
 msgstr "Ein Verbrauchsartikel, eine Zugabe oder ein auslaufendes Teil taucht in fast jeder Bestellung auf: Es wird zum Begleiter deines gesamten Sortiments, ohne etwas Nützliches auszusagen. Hier aufgeführte Produkte werden aus der Berechnung entfernt und erscheinen nie in Vorschlägen – auch nicht, wenn sie von Hand oder per Regel hinzugefügt wurden."
 
-#: cross-sell-insights.php:1668
+#: cross-sell-insights.php:2032
 msgid "Search for a product to exclude…"
 msgstr "Produkt zum Ausschließen suchen…"
 
-#: cross-sell-insights.php:1675
+#: cross-sell-insights.php:2039
 msgid "Exclusion takes effect immediately on product pages. The ranking and recommendations below update at the next calculation."
 msgstr "Der Ausschluss wirkt sofort auf den Produktseiten. Rangliste und Empfehlungen unten werden bei der nächsten Berechnung aktualisiert."
 
-#: cross-sell-insights.php:1676
+#: cross-sell-insights.php:2040
 msgid "Save exclusions"
 msgstr "Ausschlüsse speichern"
 
-#: cross-sell-insights.php:1679
+#: cross-sell-insights.php:2043
 msgid "Product pages to stop recommending"
 msgstr "Produktseiten, für die keine Empfehlungen mehr erscheinen sollen"
 
-#: cross-sell-insights.php:1680
+#: cross-sell-insights.php:2044
 msgid "These products disappear from the “On this product page” column of the recommendations table below. Use it for product pages whose configuration you have decided once and for all not to touch, and whose reminders clutter the list."
 msgstr "Diese Produkte verschwinden aus der Spalte „Auf dieser Produktseite“ der Empfehlungstabelle unten. Nutze das für Produktseiten, deren Einrichtung du ein für alle Mal nicht mehr anfassen willst und deren Hinweise die Liste überfrachten."
 
-#: cross-sell-insights.php:1687
+#: cross-sell-insights.php:2051
 msgid "Search for a product page to stop recommending…"
 msgstr "Produktseite suchen, für die keine Empfehlungen mehr erscheinen sollen…"
 
-#: cross-sell-insights.php:1694
+#: cross-sell-insights.php:2058
 msgid "Screen setting only: these product pages keep showing their suggestion block to visitors, and their products keep counting in the calculation and the ranking."
 msgstr "Betrifft nur diese Ansicht: Diese Produktseiten zeigen Besucherinnen und Besuchern weiterhin ihren Vorschlagsblock, und ihre Produkte zählen weiterhin in Berechnung und Rangliste."
 
-#: cross-sell-insights.php:1695
+#: cross-sell-insights.php:2059
 msgid "Save these product pages"
 msgstr "Diese Produktseiten speichern"
 
-#: cross-sell-insights.php:1718
+#: cross-sell-insights.php:2082
 msgid "Recommendations"
 msgstr "Empfehlungen"
 
 #. translators: %d: number of missing associations
-#: cross-sell-insights.php:1723
+#: cross-sell-insights.php:2087
 #, php-format
 msgid "%d associations are firmly established by your sales but missing from your configuration. The most frequent:"
 msgstr "%d Verknüpfungen sind durch deine Verkäufe klar belegt, fehlen aber in deiner Einrichtung. Die häufigsten:"
 
-#: cross-sell-insights.php:1734
+#: cross-sell-insights.php:2098
 msgid "On this product page"
 msgstr "Auf dieser Produktseite"
 
-#: cross-sell-insights.php:1735
+#: cross-sell-insights.php:2099
 msgid "suggest"
 msgstr "vorschlagen"
 
-#: cross-sell-insights.php:1736
+#: cross-sell-insights.php:2100
 msgid "Bought together"
 msgstr "Zusammen gekauft"
 
 #. translators: %d: how many times the pair was bought together
-#: cross-sell-insights.php:1745
-#: cross-sell-insights.php:1818
+#: cross-sell-insights.php:2109
+#: cross-sell-insights.php:2182
 #, php-format
 msgid "%d times"
 msgstr "%d Mal"
 
-#: cross-sell-insights.php:1750
+#: cross-sell-insights.php:2114
 msgid "The plugin adds these products to WooCommerce cross-sells. The operation can be undone from the Cart tab."
 msgstr "Das Plugin fügt diese Produkte den WooCommerce-Cross-Sells hinzu. Der Vorgang lässt sich im Reiter „Warenkorb“ rückgängig machen."
 
-#: cross-sell-insights.php:1752
+#: cross-sell-insights.php:2116
 msgid "Apply selection"
 msgstr "Auswahl übernehmen"
 
 #. translators: %d: number of selected rows
-#: cross-sell-insights.php:1764
-#: cross-sell-insights.php:1766
+#: cross-sell-insights.php:2128
+#: cross-sell-insights.php:2130
 #, php-format
 msgid "%d selected"
 msgid_plural "%d selected"
 msgstr[0] "%d ausgewählt"
 msgstr[1] "%d ausgewählt"
 
-#: cross-sell-insights.php:1792
+#: cross-sell-insights.php:2156
 msgid "No missing association: your configuration matches your sales."
 msgstr "Keine fehlende Verknüpfung: Deine Einrichtung passt zu deinen Verkäufen."
 
-#: cross-sell-insights.php:1798
+#: cross-sell-insights.php:2162
 msgid "Most frequently bought together"
 msgstr "Am häufigsten zusammen gekauft"
 
 #. translators: %d: number of product pairs above the threshold
-#: cross-sell-insights.php:1803
+#: cross-sell-insights.php:2167
 #, php-format
 msgid "%d pairs appear at least 3 times in the same order. The top 20:"
 msgstr "%d Paare kommen mindestens 3-mal in derselben Bestellung vor. Die Top 20:"
 
-#: cross-sell-insights.php:1810
+#: cross-sell-insights.php:2174
 msgid "Frequency"
 msgstr "Häufigkeit"
 
-#: cross-sell-insights.php:1811
-#: cross-sell-insights.php:2462
-#: cross-sell-insights.php:2468
+#: cross-sell-insights.php:2175
+#: cross-sell-insights.php:2828
+#: cross-sell-insights.php:2834
 msgid "Product"
 msgstr "Produkt"
 
-#: cross-sell-insights.php:1812
+#: cross-sell-insights.php:2176
 msgid "bought with"
 msgstr "gekauft mit"
 
-#: cross-sell-insights.php:1825
+#: cross-sell-insights.php:2189
 msgid "Useful for spotting families of parts that get repaired together, and deriving rules from them."
 msgstr "Nützlich, um Teilefamilien zu erkennen, die zusammen repariert werden, und daraus Regeln abzuleiten."
 
-#: cross-sell-insights.php:1827
+#: cross-sell-insights.php:2191
 msgid "Not enough multi-item orders yet to build a ranking."
 msgstr "Noch nicht genug Bestellungen mit mehreren Artikeln für eine Rangliste."
 
-#: cross-sell-insights.php:1842
+#: cross-sell-insights.php:2206
 msgid "How and where suggestions appear to the customer. Their content is configured in the other tabs; only presentation lives here."
 msgstr "Wie und wo Kundinnen und Kunden die Vorschläge sehen. Ihr Inhalt wird in den anderen Reitern eingerichtet; hier geht es nur um die Darstellung."
 
-#: cross-sell-insights.php:1846
+#: cross-sell-insights.php:2210
 msgid "How suggestions are shown"
 msgstr "Wie Vorschläge angezeigt werden"
 
-#: cross-sell-insights.php:1848
-msgid "The block sits at the bottom of the page, where the customer may not scroll to. The window opens right after Add to cart, at the moment they are already buying — the two are not mutually exclusive."
-msgstr "Der Block sitzt am Ende der Seite, bis wohin Kundinnen und Kunden womöglich nicht scrollen. Das Fenster öffnet sich direkt nach dem Hinzufügen zum Warenkorb, also genau im Kaufmoment – beides schließt sich nicht gegenseitig aus."
+#: cross-sell-insights.php:2212
+msgid "The two are independent, and reach the customer at different moments: the block sits at the bottom of the page, before they have decided; the window opens right after Add to cart, once they already have. Enable either, both, or neither."
+msgstr "Beide sind unabhängig und erreichen die Kundschaft zu verschiedenen Zeitpunkten: Der Block sitzt am Seitenende, bevor sie sich entschieden hat; das Fenster öffnet sich direkt nach dem Hinzufügen zum Warenkorb, wenn sie es bereits hat. Aktiviere eines, beides oder keines."
 
-#: cross-sell-insights.php:1856
-msgid "Block at the bottom of the product page only"
-msgstr "Nur der Block am Ende der Produktseite"
+#: cross-sell-insights.php:2220
+msgid "Bundle block on the product page"
+msgstr "Set-Block auf der Produktseite"
 
-#: cross-sell-insights.php:1860
-msgid "Window on Add to cart only"
-msgstr "Nur das Fenster beim Hinzufügen zum Warenkorb"
+#: cross-sell-insights.php:2222
+msgid "The product and its companions side by side, with a total price and a single button to add them all."
+msgstr "Das Produkt und seine Begleiter nebeneinander, mit einem Gesamtpreis und einem einzigen Button, um alles hinzuzufügen."
 
-#: cross-sell-insights.php:1864
-msgid "Both"
-msgstr "Beides"
+#: cross-sell-insights.php:2227
+msgid "Window on Add to cart"
+msgstr "Fenster beim Hinzufügen zum Warenkorb"
 
-#: cross-sell-insights.php:1867
+#: cross-sell-insights.php:2229
+msgid "Opens over the page the moment an item is added, showing its companions."
+msgstr "Öffnet sich über der Seite, sobald ein Artikel hinzugefügt wird, und zeigt seine Begleiter."
+
+#: cross-sell-insights.php:2233
 msgid "The window calls WooCommerce's own cart API in the browser, so the page never reloads. If the theme's Add to cart button already does something similar, test this on a staging copy of the site before turning it on everywhere."
 msgstr "Das Fenster ruft im Browser die eigene Warenkorb-API von WooCommerce auf, sodass die Seite nie neu lädt. Wenn der Warenkorb-Button des Themes bereits etwas Ähnliches tut, teste dies auf einer Staging-Kopie der Website, bevor du es überall aktivierst."
 
-#: cross-sell-insights.php:1868
-#: cross-sell-insights.php:1947
+#: cross-sell-insights.php:2234
+#: cross-sell-insights.php:2313
 msgid "Save"
 msgstr "Speichern"
 
 #. translators: %s: installed WooCommerce version number
-#: cross-sell-insights.php:1874
+#: cross-sell-insights.php:2240
 #, php-format
 msgid "The Add to cart window needs WooCommerce 8.3 or later (this site runs %s). The block below stays available regardless."
 msgstr "Das Warenkorb-Fenster benötigt WooCommerce 8.3 oder neuer (auf dieser Website läuft %s). Der Block unten bleibt in jedem Fall verfügbar."
 
-#: cross-sell-insights.php:1882
+#: cross-sell-insights.php:2248
 msgid "Window appearance"
 msgstr "Erscheinungsbild des Fensters"
 
-#: cross-sell-insights.php:1883
+#: cross-sell-insights.php:2249
 msgid "Applies whenever the window is enabled above, whether or not the block is also shown."
 msgstr "Gilt immer, wenn das Fenster oben aktiviert ist – unabhängig davon, ob auch der Block angezeigt wird."
 
-#: cross-sell-insights.php:1891
+#: cross-sell-insights.php:2257
 msgid "Suggestions title"
 msgstr "Titel der Vorschläge"
 
-#: cross-sell-insights.php:1897
+#: cross-sell-insights.php:2263
 msgid "\"Added to cart\" message"
 msgstr "Meldung „Zum Warenkorb hinzugefügt“"
 
-#: cross-sell-insights.php:1903
+#: cross-sell-insights.php:2269
 msgid "Colours"
 msgstr "Farben"
 
-#: cross-sell-insights.php:1907
+#: cross-sell-insights.php:2273
 msgid "Automatically match my theme's colours"
 msgstr "Automatisch an die Farben meines Themes anpassen"
 
-#: cross-sell-insights.php:1909
+#: cross-sell-insights.php:2275
 msgid "Reads the colour of the real Add to cart button and the page background at the moment the window opens. Uncheck to set fixed colours instead."
 msgstr "Liest die Farbe des echten Warenkorb-Buttons und des Seitenhintergrunds in dem Moment, in dem das Fenster geöffnet wird. Deaktivieren, um stattdessen feste Farben festzulegen."
 
-#: cross-sell-insights.php:1911
+#: cross-sell-insights.php:2277
 msgid "Accent"
 msgstr "Akzentfarbe"
 
-#: cross-sell-insights.php:1914
+#: cross-sell-insights.php:2280
 msgid "Background"
 msgstr "Hintergrund"
 
-#: cross-sell-insights.php:1917
+#: cross-sell-insights.php:2283
 msgid "Text"
 msgstr "Text"
 
-#: cross-sell-insights.php:1920
+#: cross-sell-insights.php:2286
 msgid "Pick background and text colours with enough contrast between them to stay readable."
 msgstr "Wähle Hintergrund- und Textfarben mit genügend Kontrast zueinander, damit sie lesbar bleiben."
 
-#: cross-sell-insights.php:1925
+#: cross-sell-insights.php:2291
 msgid "Corner rounding"
 msgstr "Eckenrundung"
 
-#: cross-sell-insights.php:1934
+#: cross-sell-insights.php:2300
 msgid "Layout"
 msgstr "Anordnung"
 
-#: cross-sell-insights.php:1938
+#: cross-sell-insights.php:2304
 msgid "Row: one suggestion per line"
 msgstr "Zeile: ein Vorschlag pro Zeile"
 
-#: cross-sell-insights.php:1942
+#: cross-sell-insights.php:2308
 msgid "Columns: a small grid of cards"
 msgstr "Spalten: ein kleines Raster aus Karten"
 
-#: cross-sell-insights.php:1951
+#: cross-sell-insights.php:2317
 msgid "Preview"
 msgstr "Vorschau"
 
-#: cross-sell-insights.php:2057
+#: cross-sell-insights.php:2423
 msgid "What the customer sees on the product page, before adding to the cart. These suggestions belong to the plugin and do not affect WooCommerce cross-sells."
 msgstr "Was Kundinnen und Kunden auf der Produktseite sehen, bevor sie zum Warenkorb hinzufügen. Diese Vorschläge gehören zum Plugin und wirken sich nicht auf die WooCommerce-Cross-Sells aus."
 
-#: cross-sell-insights.php:2060
+#: cross-sell-insights.php:2426
 msgid "Associations calculated from history take priority; the rules below only serve products that do not have any yet. The calculation and its diagnosis are in the Analysis tab."
 msgstr "Aus der Historie berechnete Verknüpfungen haben Vorrang; die Regeln unten greifen nur bei Produkten, die noch keine haben. Berechnung und Diagnose findest du im Reiter „Analyse“."
 
-#: cross-sell-insights.php:2063
+#: cross-sell-insights.php:2429
 msgid "Rules by family of parts"
 msgstr "Regeln nach Teilefamilie"
 
-#: cross-sell-insights.php:2064
+#: cross-sell-insights.php:2430
 msgid "For products that do not have enough history yet. Choose a tag (a family of items) or a category (a product line), then the items to suggest."
 msgstr "Für Produkte, die noch nicht genug Historie haben. Wähle ein Schlagwort (eine Artikelfamilie) oder eine Kategorie (eine Produktlinie) und dann die vorzuschlagenden Artikel."
 
-#: cross-sell-insights.php:2065
+#: cross-sell-insights.php:2431
 msgid "Example: tag “Battery” → Charger, Protective case"
 msgstr "Beispiel: Schlagwort „Akku“ → Ladegerät, Schutzhülle"
 
-#: cross-sell-insights.php:2073
+#: cross-sell-insights.php:2439
 msgid "Target tag or category"
 msgstr "Ziel-Schlagwort oder -Kategorie"
 
-#: cross-sell-insights.php:2074
+#: cross-sell-insights.php:2440
 msgid "Products to suggest"
 msgstr "Vorzuschlagende Produkte"
 
-#: cross-sell-insights.php:2084
+#: cross-sell-insights.php:2450
 msgid "Choose a tag or a category…"
 msgstr "Schlagwort oder Kategorie wählen…"
 
-#: cross-sell-insights.php:2096
-#: cross-sell-insights.php:2216
-#: cross-sell-insights.php:2224
+#: cross-sell-insights.php:2462
+#: cross-sell-insights.php:2582
+#: cross-sell-insights.php:2590
 msgid "Search for a product…"
 msgstr "Produkt suchen…"
 
-#: cross-sell-insights.php:2108
+#: cross-sell-insights.php:2474
 msgid "Remove"
 msgstr "Entfernen"
 
-#: cross-sell-insights.php:2115
+#: cross-sell-insights.php:2481
 msgid "Add a rule"
 msgstr "Regel hinzufügen"
 
-#: cross-sell-insights.php:2117
+#: cross-sell-insights.php:2483
 msgid "Save rules"
 msgstr "Regeln speichern"
 
-#: cross-sell-insights.php:2169
+#: cross-sell-insights.php:2535
 msgid "What the customer sees in their cart, after choosing a product. These are WooCommerce cross-sells, shared with the rest of the site."
 msgstr "Was Kundinnen und Kunden in ihrem Warenkorb sehen, nachdem sie ein Produkt gewählt haben. Das sind die WooCommerce-Cross-Sells, die mit dem Rest der Website geteilt werden."
 
-#: cross-sell-insights.php:2175
+#: cross-sell-insights.php:2541
 msgid "Recent cross-sell changes"
 msgstr "Letzte Änderungen an den Cross-Sells"
 
 #. translators: 1: date, 2: name of the operation, 3: number of products affected
-#: cross-sell-insights.php:2181
+#: cross-sell-insights.php:2547
 #, php-format
 msgid "%1$s — %2$s — %3$d products"
 msgstr "%1$s – %2$s – %3$d Produkte"
 
-#: cross-sell-insights.php:2188
+#: cross-sell-insights.php:2554
 msgid "Undo this one"
 msgstr "Diesen Vorgang rückgängig machen"
 
-#: cross-sell-insights.php:2193
+#: cross-sell-insights.php:2559
 msgid "Undo works one operation at a time, from the most recent to the oldest."
 msgstr "Rückgängig machen funktioniert Vorgang für Vorgang, vom neuesten zum ältesten."
 
-#: cross-sell-insights.php:2198
-#: cross-sell-insights.php:2956
+#: cross-sell-insights.php:2564
+#: cross-sell-insights.php:3328
 msgid "Bulk assignment"
 msgstr "Massenzuweisung"
 
-#: cross-sell-insights.php:2199
+#: cross-sell-insights.php:2565
 msgid "Adds cross-sell products to a whole category, a tag or a selection of products."
 msgstr "Fügt Cross-Sell-Produkte einer ganzen Kategorie, einem Schlagwort oder einer Produktauswahl hinzu."
 
-#: cross-sell-insights.php:2206
+#: cross-sell-insights.php:2572
 msgid "Apply to"
 msgstr "Anwenden auf"
 
-#: cross-sell-insights.php:2209
+#: cross-sell-insights.php:2575
 msgid "Categories or tags…"
 msgstr "Kategorien oder Schlagwörter…"
 
-#: cross-sell-insights.php:2214
+#: cross-sell-insights.php:2580
 msgid "and / or specific products:"
 msgstr "und/oder bestimmte Produkte:"
 
-#: cross-sell-insights.php:2221
+#: cross-sell-insights.php:2587
 msgid "Cross-sell products to add"
 msgstr "Hinzuzufügende Cross-Sell-Produkte"
 
-#: cross-sell-insights.php:2229
+#: cross-sell-insights.php:2595
 msgid "Mode"
 msgstr "Modus"
 
-#: cross-sell-insights.php:2232
+#: cross-sell-insights.php:2598
 msgid "Add to existing cross-sells"
 msgstr "Zu bestehenden Cross-Sells hinzufügen"
 
-#: cross-sell-insights.php:2234
+#: cross-sell-insights.php:2600
 msgid "Replace existing cross-sells"
 msgstr "Bestehende Cross-Sells ersetzen"
 
-#: cross-sell-insights.php:2235
+#: cross-sell-insights.php:2601
 msgid "Previous values are saved: the operation can be undone."
 msgstr "Die vorherigen Werte werden gespeichert: Der Vorgang lässt sich rückgängig machen."
 
-#: cross-sell-insights.php:2239
+#: cross-sell-insights.php:2605
 msgid "Apply"
 msgstr "Anwenden"
 
-#: cross-sell-insights.php:2285
+#: cross-sell-insights.php:2651
 msgid "Back to the analysis"
 msgstr "Zurück zur Analyse"
 
-#: cross-sell-insights.php:2291
+#: cross-sell-insights.php:2657
 msgid "Upsells offer a higher-end alternative to the product being viewed, on its page. Rarely useful on a spare-parts catalogue, but editable here if needed."
 msgstr "Upsells bieten auf der Produktseite eine höherwertige Alternative zum betrachteten Produkt. Bei einem Ersatzteilkatalog selten sinnvoll, hier aber bei Bedarf bearbeitbar."
 
-#: cross-sell-insights.php:2293
+#: cross-sell-insights.php:2659
 msgid "Review view: the products of a category or a tag, with their product page suggestions and their cart cross-sells. Calculated associations are shown for reference."
 msgstr "Prüfansicht: die Produkte einer Kategorie oder eines Schlagworts, mit ihren Vorschlägen für die Produktseite und ihren Cross-Sells im Warenkorb. Die berechneten Verknüpfungen werden zum Vergleich angezeigt."
 
-#: cross-sell-insights.php:2306
+#: cross-sell-insights.php:2672
 msgid "A category or a tag…"
 msgstr "Eine Kategorie oder ein Schlagwort…"
 
-#: cross-sell-insights.php:2307
+#: cross-sell-insights.php:2673
 msgid "— none —"
 msgstr "– keine –"
 
-#: cross-sell-insights.php:2317
+#: cross-sell-insights.php:2683
 msgid "and / or specific products…"
 msgstr "und/oder bestimmte Produkte…"
 
-#: cross-sell-insights.php:2326
+#: cross-sell-insights.php:2692
 msgid "Products per page:"
 msgstr "Produkte pro Seite:"
 
-#: cross-sell-insights.php:2333
+#: cross-sell-insights.php:2699
 msgid "Show"
 msgstr "Anzeigen"
 
-#: cross-sell-insights.php:2337
+#: cross-sell-insights.php:2703
 msgid "Reset the selection"
 msgstr "Auswahl zurücksetzen"
 
-#: cross-sell-insights.php:2344
+#: cross-sell-insights.php:2710
 msgid "Choose a category, a tag or products to start."
 msgstr "Wähle zum Start eine Kategorie, ein Schlagwort oder Produkte."
 
-#: cross-sell-insights.php:2374
-#: cross-sell-insights.php:2390
+#: cross-sell-insights.php:2740
+#: cross-sell-insights.php:2756
 msgid "No product in this selection."
 msgstr "Kein Produkt in dieser Auswahl."
 
 #. translators: 1: total products, 2: current page, 3: total pages
-#: cross-sell-insights.php:2397
+#: cross-sell-insights.php:2763
 #, php-format
 msgid "%1$d products — page %2$d of %3$d"
 msgstr "%1$d Produkte – Seite %2$d von %3$d"
 
-#: cross-sell-insights.php:2433
+#: cross-sell-insights.php:2799
 msgid "Apply to every row shown"
 msgstr "Auf alle angezeigten Zeilen anwenden"
 
-#: cross-sell-insights.php:2436
+#: cross-sell-insights.php:2802
 msgid "Choose the product to add…"
 msgstr "Hinzuzufügendes Produkt wählen…"
 
-#: cross-sell-insights.php:2441
+#: cross-sell-insights.php:2807
 msgid "Add to upsells"
 msgstr "Zu den Upsells hinzufügen"
 
-#: cross-sell-insights.php:2443
+#: cross-sell-insights.php:2809
 msgid "Add to suggestions"
 msgstr "Zu den Vorschlägen hinzufügen"
 
-#: cross-sell-insights.php:2444
+#: cross-sell-insights.php:2810
 msgid "Add to cross-sells"
 msgstr "Zu den Cross-Sells hinzufügen"
 
-#: cross-sell-insights.php:2446
+#: cross-sell-insights.php:2812
 msgid "Remove everywhere"
 msgstr "Überall entfernen"
 
 #. translators: %d: number of products shown on the current page
-#: cross-sell-insights.php:2451
+#: cross-sell-insights.php:2817
 #, php-format
 msgid "Acts on the %d products shown on this page. Nothing is saved until you confirm at the bottom."
 msgstr "Wirkt auf die %d auf dieser Seite angezeigten Produkte. Es wird nichts gespeichert, bis du unten bestätigst."
 
-#: cross-sell-insights.php:2465
+#: cross-sell-insights.php:2831
 msgid "— product page, as an alternative"
 msgstr "– Produktseite, als Alternative"
 
-#: cross-sell-insights.php:2470
+#: cross-sell-insights.php:2836
 msgid "Suggestions"
 msgstr "Vorschläge"
 
-#: cross-sell-insights.php:2471
+#: cross-sell-insights.php:2837
 msgid "— product page"
 msgstr "– Produktseite"
 
-#: cross-sell-insights.php:2474
+#: cross-sell-insights.php:2840
 msgid "Cross-sells"
 msgstr "Cross-Sells"
 
-#: cross-sell-insights.php:2475
+#: cross-sell-insights.php:2841
 msgid "— cart"
 msgstr "– Warenkorb"
 
-#: cross-sell-insights.php:2505
+#: cross-sell-insights.php:2871
 msgid "Edit"
 msgstr "Bearbeiten"
 
-#: cross-sell-insights.php:2517
-#: cross-sell-insights.php:2530
-#: cross-sell-insights.php:2551
+#: cross-sell-insights.php:2883
+#: cross-sell-insights.php:2896
+#: cross-sell-insights.php:2917
 msgid "Search…"
 msgstr "Suchen…"
 
-#: cross-sell-insights.php:2539
+#: cross-sell-insights.php:2905
 msgid "Calculated:"
 msgstr "Berechnet:"
 
-#: cross-sell-insights.php:2565
+#: cross-sell-insights.php:2931
 msgid "Save this page"
 msgstr "Diese Seite speichern"
 
-#: cross-sell-insights.php:2585
+#: cross-sell-insights.php:2951
 msgid "Choose a product first."
 msgstr "Wähle zuerst ein Produkt."
 
-#: cross-sell-insights.php:2629
+#: cross-sell-insights.php:2995
 msgid "field(s) changed — remember to save."
 msgstr "Feld(er) geändert – denk ans Speichern."
 

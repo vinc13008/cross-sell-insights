@@ -45,6 +45,14 @@ final class Cross_Sell_Insights {
 	// prend ici, à l'affichage.
 	private const NB_MODAL = 4;
 
+	/**
+	 * Compagnons proposés dans le bloc d'achat groupé, en plus du produit
+	 * consulté. Deux, donc trois articles en tout : au-delà, la rangée de
+	 * vignettes se casse sur mobile et le total cesse d'être lisible d'un coup
+	 * d'œil — c'est aussi le nombre qu'Amazon retient.
+	 */
+	private const NB_BLOC = 2;
+
 	public static function init(): void {
 		// Aucun chargement manuel du domaine de traduction : sur le dépôt
 		// WordPress.org, les traductions sont servies automatiquement d'après le
@@ -113,16 +121,22 @@ final class Cross_Sell_Insights {
 
 		global $wpdb;
 		foreach ( [ '_bit_compagnons' => self::META, '_bit_manuel' => self::META_MANUEL ] as $ancien => $nouveau ) {
-			// Renommage en place plutôt que lecture puis réécriture : le catalogue
-			// peut compter des milliers de fiches, et une seule requête suffit.
-			// Le cache objet est purgé juste après, d'où l'absence de mise en cache ici.
+			// On relève d'abord les fiches concernées, puis on renomme en une
+			// requête. Le relevé sert à ne vider du cache objet que ces fiches-là :
+			// une modification directe en base passe dans le dos du cache, mais
+			// wp_cache_flush() y répondrait en évinçant TOUT — sur un site sous
+			// Redis, c'est un pic de charge gratuit là où quelques clés suffisent.
 			// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+			$fiches = $wpdb->get_col( $wpdb->prepare( "SELECT DISTINCT post_id FROM {$wpdb->postmeta} WHERE meta_key = %s", $ancien ) );
+			if ( ! $fiches ) {
+				continue;
+			}
 			$wpdb->update( $wpdb->postmeta, [ 'meta_key' => $nouveau ], [ 'meta_key' => $ancien ] );
 			// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+			foreach ( $fiches as $fiche ) {
+				wp_cache_delete( (int) $fiche, 'post_meta' );
+			}
 		}
-		// Les métadonnées viennent d'être modifiées dans le dos du cache objet :
-		// sans purge, un site sous Redis servirait indéfiniment les anciennes clés.
-		wp_cache_flush();
 
 		delete_transient( 'bit_analyse' );
 		wp_clear_scheduled_hook( 'bit_recalcul' );
@@ -368,56 +382,416 @@ final class Cross_Sell_Insights {
 			return;
 		}
 
-		$mode = self::mode_fiche();
+		$modes = self::modes_actifs();
 
-		if ( 'modal' !== $mode ) {
-			self::afficher_bloc( $produits );
+		if ( $modes['bloc'] ) {
+			self::afficher_bloc( $product, $produits );
 		}
-		if ( 'bloc' !== $mode ) {
+		if ( $modes['modal'] ) {
 			self::afficher_modal( $product, $produits );
 		}
 	}
 
-	/** Le bloc statique, affiché en bas de la fiche produit. */
-	private static function afficher_bloc( array $produits ): void {
+	/**
+	 * Le bloc d'achat groupé, en bas de la fiche produit.
+	 *
+	 * Reprend le motif rendu familier par Amazon : le produit consulté, ses
+	 * compagnons, un prix total et un bouton pour tout ajouter d'un coup. Son
+	 * intérêt tient à ce dernier point — montrer des suggestions est une chose,
+	 * épargner au client trois allers-retours vers le panier en est une autre.
+	 *
+	 * Seuls les articles ajoutables en un clic (produits simples, en stock)
+	 * reçoivent une case à cocher : une variation demande de choisir ses
+	 * options, ce qu'aucun bouton groupé ne peut faire à la place du client.
+	 * Les autres restent affichés — ils gardent leur valeur de suggestion — mais
+	 * hors du total.
+	 */
+	private static function afficher_bloc( WC_Product $produit, array $produits ): void {
+		// Un seul bloc par page, quoi qu'il arrive. Certains thèmes déclenchent
+		// deux fois le crochet de fin de fiche (aperçu rapide, résumé collant) ;
+		// le second bloc rendrait des identifiants HTML en double, et son script
+		// se lierait aux éléments du PREMIER — un clic déclencherait alors deux
+		// ajouts, et le client paierait le double de ce que le total annonce.
+		static $deja_affiche = false;
+		if ( $deja_affiche ) {
+			return;
+		}
+		$deja_affiche = true;
+
+		$max      = (int) apply_filters( 'csins_nb_bloc', self::NB_BLOC );
+		$produits = array_slice( $produits, 0, max( 1, $max ) );
+
+		// Le produit consulté ouvre la rangée : c'est le « cet article » d'Amazon,
+		// le point de repère à partir duquel le reste se lit.
+		$rangee = array_merge( [ $produit ], $produits );
+
+		$style = self::modal_style();
+		$vars  = sprintf( '--csins-rayon:%dpx;', (int) $style['rayon'] );
+		if ( $style['couleurs_personnalisees'] ) {
+			$vars .= sprintf(
+				'--csins-accent:%s;--csins-texte:%s;',
+				$style['couleur_accent'],
+				$style['couleur_texte']
+			);
+		}
+
+		// Un article n'entre dans l'achat groupé que s'il peut s'ajouter en un
+		// clic et porter un prix. Calculé avant le rendu : sans aucun article
+		// éligible, le total vaudrait zéro et le bouton resterait désactivé —
+		// une commande morte, qui donne l'impression d'une boutique cassée.
+		$ajoutables = array_filter(
+			$rangee,
+			static function ( WC_Product $p ): bool {
+				return $p->is_type( 'simple' ) && $p->is_purchasable() && $p->is_in_stock() && '' !== $p->get_price();
+			}
+		);
+		$groupable = count( $ajoutables ) > 0;
+
 		$titre = apply_filters(
-			'csins_titre',
-			__( 'Frequently bought with this part', 'cross-sell-insights' )
+			'csins_titre_bloc',
+			__( 'People also bought', 'cross-sell-insights' )
 		);
 		?>
-		<section class="csins">
+		<section class="csins" style="<?php echo esc_attr( $vars ); ?>"
+		         <?php echo $style['couleurs_personnalisees'] ? '' : 'data-couleurs-auto="1"'; ?>>
 			<h3 class="csins__titre"><?php echo esc_html( $titre ); ?></h3>
-			<ul class="csins__liste products">
-				<?php foreach ( $produits as $p ) : ?>
-					<li class="csins__item">
-						<a class="csins__lien" href="<?php echo esc_url( $p->get_permalink() ); ?>">
-							<?php echo wp_kses_post( $p->get_image( 'woocommerce_thumbnail' ) ); ?>
-							<span class="csins__nom"><?php echo esc_html( $p->get_name() ); ?></span>
-							<span class="csins__prix"><?php echo wp_kses_post( $p->get_price_html() ); ?></span>
-						</a>
+
+			<div class="csins__corps">
+				<ul class="csins__rangee">
+					<?php foreach ( $rangee as $i => $p ) : ?>
+						<?php if ( $i > 0 ) : ?>
+							<li class="csins__plus" aria-hidden="true">+</li>
+						<?php endif; ?>
+						<li class="csins__vignette">
+							<a href="<?php echo esc_url( $p->get_permalink() ); ?>">
+								<?php echo wp_kses_post( $p->get_image( 'woocommerce_thumbnail' ) ); ?>
+							</a>
+						</li>
+					<?php endforeach; ?>
+				</ul>
+
+				<?php if ( $groupable ) : ?>
+				<div class="csins__total">
+					<p class="csins__total-prix">
+						<span class="csins__total-libelle"><?php esc_html_e( 'Total price:', 'cross-sell-insights' ); ?></span>
+						<?php
+						// aria-live : cocher ou décocher change le montant sans qu'aucun
+						// élément ne prenne le focus. Sans cela, la seule information que
+						// le client vient de modifier reste invisible à un lecteur
+						// d'écran. « polite » attend une pause plutôt que de couper.
+						?>
+						<strong id="csins-total" class="csins__total-somme" aria-live="polite"></strong>
+					</p>
+					<button type="button" class="csins__ajouter-tout" id="csins-ajouter-tout"></button>
+					<p class="csins__note" id="csins-note" role="status"></p>
+				</div>
+				<?php endif; ?>
+			</div>
+
+			<ul class="csins__choix">
+				<?php foreach ( $rangee as $i => $p ) :
+					// get_price() est vide sur un produit non tarifé ; on ne met une
+					// case que sur ce qui peut réellement être ajouté et chiffré.
+					$ajoutable = $p->is_type( 'simple' ) && $p->is_purchasable() && $p->is_in_stock() && '' !== $p->get_price();
+					?>
+					<li class="csins__choix-item">
+						<?php if ( $ajoutable ) : ?>
+							<label class="csins__case">
+								<input type="checkbox" class="csins__coche" checked
+								       data-id="<?php echo (int) $p->get_id(); ?>"
+								       data-prix="<?php echo esc_attr( (string) wc_get_price_to_display( $p ) ); ?>">
+								<span class="csins__etiquette">
+									<?php if ( 0 === $i ) : ?>
+										<span class="csins__cet-article"><?php esc_html_e( 'This item:', 'cross-sell-insights' ); ?></span>
+									<?php endif; ?>
+									<a href="<?php echo esc_url( $p->get_permalink() ); ?>"><?php echo esc_html( $p->get_name() ); ?></a>
+									<span class="csins__prix"><?php echo wp_kses_post( $p->get_price_html() ); ?></span>
+								</span>
+							</label>
+						<?php else : ?>
+							<span class="csins__case csins__case--sans">
+								<span class="csins__etiquette">
+									<a href="<?php echo esc_url( $p->get_permalink() ); ?>"><?php echo esc_html( $p->get_name() ); ?></a>
+									<span class="csins__prix"><?php echo wp_kses_post( $p->get_price_html() ); ?></span>
+									<span class="csins__options"><?php esc_html_e( 'options to choose', 'cross-sell-insights' ); ?></span>
+								</span>
+							</span>
+						<?php endif; ?>
 					</li>
 				<?php endforeach; ?>
 			</ul>
 		</section>
-		<style>
-			/* Peu d'air au-dessus : le bloc suit le contenu de la fiche et n'a pas
-			   à s'en détacher. On en garde en dessous, avant les apparentés. */
-			.csins { margin: 1.2em 0 2.5em; clear: both; }
-			.csins__titre { font-size: 1.1em; margin: 0 0 1em; }
-			.csins__liste { display: grid; gap: 1.25em; list-style: none; margin: 0; padding: 0;
-				grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
-			.csins__item { margin: 0; }
-			.csins__lien { display: block; text-decoration: none; color: inherit;
-				border: 1px solid rgba(0,0,0,.08); border-radius: 6px; overflow: hidden;
-				transition: border-color .15s ease, transform .15s ease; }
-			.csins__lien:hover, .csins__lien:focus-visible {
-				border-color: rgba(0,0,0,.22); transform: translateY(-2px); }
-			.csins__lien img { display: block; width: 100%; height: auto; }
-			.csins__nom { display: block; padding: .7em .8em 0; font-size: .88em; line-height: 1.35; }
-			.csins__prix { display: block; padding: .35em .8em .8em; font-weight: 600; font-size: .95em; }
-			@media (prefers-reduced-motion: reduce) { .csins__lien { transition: none; } }
-		</style>
+		<style><?php echo self::css_bloc(); // phpcs:ignore WordPress.Security.EscapeOutput -- feuille de style figée, sans entrée utilisateur ?></style>
 		<?php
+		self::script_bloc();
+	}
+
+
+	/**
+	 * Script du bloc d'achat groupé.
+	 *
+	 * Trois choses : tenir le total à jour au fil des cases cochées, ajouter les
+	 * articles retenus en un clic, et — si l'administrateur a laissé les
+	 * couleurs automatiques — emprunter l'accent du thème plutôt qu'imposer le
+	 * nôtre.
+	 *
+	 * L'ajout passe par la Store API, une requête par article. Elles sont
+	 * enchaînées et non lancées en parallèle : la session WooCommerce est un
+	 * état partagé, et deux écritures simultanées peuvent s'écraser l'une
+	 * l'autre.
+	 */
+	private static function script_bloc(): void {
+		?>
+		<script>
+		( function () {
+			var bloc = document.querySelector( '.csins' );
+			if ( ! bloc ) { return; }
+
+			var base    = <?php echo wp_json_encode( esc_url_raw( rest_url( 'wc/store/v1/' ) ) ); ?>;
+			var panier  = <?php echo wp_json_encode( esc_url_raw( wc_get_cart_url() ) ); ?>;
+			var coches  = bloc.querySelectorAll( '.csins__coche' );
+			var bouton  = document.getElementById( 'csins-ajouter-tout' );
+			var somme   = document.getElementById( 'csins-total' );
+			var note    = document.getElementById( 'csins-note' );
+			var nonce   = null;
+
+			// Couleurs empruntées au thème : utile même sans achat groupé, car
+			// elles habillent aussi les vignettes. Donc avant la sortie ci-dessous.
+			if ( bloc.dataset.couleursAuto ) {
+				var estTransparente = function ( c ) {
+					return ! c || 'transparent' === c || /rgba\(\s*0\s*,\s*0\s*,\s*0\s*,\s*0\s*\)/.test( c );
+				};
+				var reference = document.querySelector( 'form.cart button[type="submit"], form.cart .single_add_to_cart_button' );
+				if ( reference ) {
+					var fond = getComputedStyle( reference ).backgroundColor;
+					if ( ! estTransparente( fond ) ) { bloc.style.setProperty( '--csins-accent', fond ); }
+				}
+			}
+
+			// Aucun article ajoutable en un clic : PHP n'a alors rendu ni total ni
+			// bouton, et il n'y a rien à animer ici.
+			if ( ! bouton || ! somme || ! note ) { return; }
+
+			// Les libellés viennent de PHP : eux seuls savent quelle langue le
+			// site parle et comment WooCommerce y écrit une somme d'argent.
+			var libelles = {
+				un:      <?php echo wp_json_encode( __( 'Add this item to cart', 'cross-sell-insights' ) ); ?>,
+				plusieurs: <?php
+					/* translators: %d: number of items selected in the bundle */
+					echo wp_json_encode( __( 'Add the %d items to cart', 'cross-sell-insights' ) );
+				?>,
+				aucun:   <?php echo wp_json_encode( __( 'Select at least one item', 'cross-sell-insights' ) ); ?>,
+				encours: <?php echo wp_json_encode( __( 'Adding…', 'cross-sell-insights' ) ); ?>,
+				fait:    <?php echo wp_json_encode( __( 'Added to your cart.', 'cross-sell-insights' ) ); ?>,
+				voir:    <?php echo wp_json_encode( __( 'View cart', 'cross-sell-insights' ) ); ?>,
+				erreur:  <?php echo wp_json_encode( __( 'Could not add to cart. Please try again.', 'cross-sell-insights' ) ); ?>,
+			};
+
+			// Le formatage monétaire de WooCommerce, transmis tel quel : reconstruire
+			// « 1 234,56 € » à la main se casse dès qu'on change de devise ou de
+			// séparateur.
+			var devise = <?php
+				echo wp_json_encode( [
+					'symbole'    => html_entity_decode( get_woocommerce_currency_symbol(), ENT_QUOTES, 'UTF-8' ),
+					'position'   => get_option( 'woocommerce_currency_pos', 'left' ),
+					'decimales'  => wc_get_price_decimals(),
+					'sep_dec'    => wc_get_price_decimal_separator(),
+					'sep_mil'    => wc_get_price_thousand_separator(),
+				] );
+			?>;
+
+			function formater( montant ) {
+				var n = montant.toFixed( devise.decimales );
+				var parts = n.split( '.' );
+				parts[0] = parts[0].replace( /\B(?=(\d{3})+(?!\d))/g, devise.sep_mil );
+				var texte = parts.join( devise.sep_dec );
+				switch ( devise.position ) {
+					case 'left':        return devise.symbole + texte;
+					case 'left_space':  return devise.symbole + ' ' + texte;
+					case 'right':       return texte + devise.symbole;
+					default:            return texte + ' ' + devise.symbole;
+				}
+			}
+
+			function retenus() {
+				return Array.prototype.filter.call( coches, function ( c ) { return c.checked; } );
+			}
+
+			function rafraichir() {
+				var choisis = retenus();
+				var total = choisis.reduce( function ( t, c ) {
+					return t + parseFloat( c.dataset.prix || '0' );
+				}, 0 );
+				somme.textContent = formater( total );
+
+				if ( 0 === choisis.length ) {
+					bouton.textContent = libelles.aucun;
+					bouton.disabled = true;
+					return;
+				}
+				bouton.disabled = false;
+				bouton.textContent = 1 === choisis.length
+					? libelles.un
+					: libelles.plusieurs.replace( '%d', choisis.length );
+			}
+
+			function nonceCourant() {
+				if ( nonce ) { return Promise.resolve( nonce ); }
+				return fetch( base + 'cart', { credentials: 'same-origin' } )
+					.then( function ( r ) { nonce = r.headers.get( 'Nonce' ); return nonce; } );
+			}
+
+			function ajouter( id ) {
+				return nonceCourant().then( function ( n ) {
+					return fetch( base + 'cart/add-item', {
+						method: 'POST',
+						credentials: 'same-origin',
+						headers: { 'Content-Type': 'application/json', 'Nonce': n },
+						body: JSON.stringify( { id: parseInt( id, 10 ), quantity: 1 } ),
+					} );
+				} ).then( function ( r ) {
+					var n2 = r.headers.get( 'Nonce' );
+					if ( n2 ) { nonce = n2; } // le jeton tourne à chaque appel
+					if ( ! r.ok ) { throw new Error( 'add failed' ); }
+					return r.json();
+				} );
+			}
+
+			Array.prototype.forEach.call( coches, function ( c ) {
+				c.addEventListener( 'change', rafraichir );
+			} );
+
+			bouton.addEventListener( 'click', function () {
+				var choisis = retenus();
+				if ( ! choisis.length ) { return; }
+
+				bouton.disabled = true;
+				bouton.textContent = libelles.encours;
+				note.textContent = '';
+
+				// Enchaînement strict : chaque ajout attend le précédent.
+				choisis.reduce( function ( suite, c ) {
+					return suite.then( function () { return ajouter( c.dataset.id ); } );
+				}, Promise.resolve() ).then( function () {
+					if ( window.jQuery ) {
+						// Laisse WooCommerce rafraîchir lui-même le compteur du thème.
+						window.jQuery( document.body ).trigger( 'wc_fragment_refresh' );
+					}
+					note.innerHTML = '';
+					note.appendChild( document.createTextNode( libelles.fait + ' ' ) );
+					var lien = document.createElement( 'a' );
+					lien.href = panier;
+					lien.textContent = libelles.voir;
+					note.appendChild( lien );
+					bouton.textContent = libelles.fait;
+				} ).catch( function () {
+					note.textContent = libelles.erreur;
+					bouton.disabled = false;
+					rafraichir();
+				} );
+			} );
+
+			rafraichir();
+		} )();
+		</script>
+		<?php
+	}
+
+	/**
+	 * Feuille de style du bloc d'achat groupé.
+	 *
+	 * Écrite pour tenir sur n'importe quel thème : aucune couleur codée en dur
+	 * hors des neutres, tout le reste passe par les variables CSS posées par
+	 * l'appelant. Les tailles sont en em, donc relatives à la typographie du
+	 * thème hôte — le bloc s'accorde au lieu de s'imposer.
+	 */
+	private static function css_bloc(): string {
+		ob_start();
+		?>
+		.csins { --csins-bord: color-mix(in srgb, currentColor 14%, transparent);
+			margin: 2em 0 2.5em; clear: both;
+			border: 1px solid var(--csins-bord);
+			border-radius: var(--csins-rayon, 14px);
+			padding: 1.4em 1.5em; }
+		.csins__titre { font-size: 1.15em; font-weight: 700; margin: 0 0 1.1em; line-height: 1.3; }
+
+		/* Rangée de vignettes et bloc du total côte à côte tant qu'il y a la
+		   place ; l'un sous l'autre dès que c'est serré, sans point de rupture
+		   fixe — c'est la largeur réelle du conteneur qui décide, pas celle de
+		   l'écran, car le bloc peut vivre dans une colonne étroite. */
+		.csins__corps { display: flex; flex-wrap: wrap; gap: 1.6em 2.2em;
+			align-items: center; justify-content: flex-start; }
+
+		/* La rangée ne se replie jamais : un « + » renvoyé en fin de ligne se
+		   retrouve orphelin, séparateur sans rien à séparer. Ce sont les
+		   vignettes qui rétrécissent, toutes ensemble, jusqu'à leur plancher. */
+		.csins__rangee { display: flex; align-items: center; gap: .7em; flex-wrap: nowrap;
+			list-style: none; margin: 0; padding: 0; flex: 0 1 auto; min-width: 0; }
+		/* max-width borne la contribution intrinsèque : sans elle, l'image en
+		   width:100% fait remonter sa largeur naturelle — 600 px pour une photo
+		   de pièce — et la rangée réclame toute la largeur, chassant le total
+		   sur la ligne suivante alors qu'il y avait la place. */
+		.csins__vignette { margin: 0; flex: 0 1 92px; min-width: 44px; max-width: 92px; }
+		/* color:inherit avant tout : --csins-bord se résout en currentColor à
+		   l'endroit où il sert, et dans un <a> ce serait la couleur des liens du
+		   thème — un liseré bleu autour de chaque vignette. */
+		.csins__vignette a { color: inherit; display: block; border: 1px solid var(--csins-bord);
+			border-radius: max(4px, calc(var(--csins-rayon, 14px) * .45));
+			overflow: hidden; background: #fff;
+			transition: border-color .15s ease, transform .15s ease; }
+		.csins__vignette a:hover, .csins__vignette a:focus-visible {
+			border-color: var(--csins-accent, currentColor); transform: translateY(-2px); }
+		.csins__vignette img { display: block; width: 100%; height: auto; aspect-ratio: 1;
+			object-fit: contain; margin: 0; padding: 6px; box-sizing: border-box; }
+		.csins__plus { margin: 0; flex: 0 0 auto; font-size: 1.6em; font-weight: 400;
+			opacity: .3; line-height: 1; user-select: none; }
+
+		/* Le total colle aux vignettes plutôt que d'être repoussé au bord : entre
+		   les deux, un vide de plusieurs centimètres cassait la lecture « ces
+		   articles font ce prix ». */
+		.csins__total { flex: 0 1 auto; text-align: left; min-width: 200px; }
+		.csins__total-prix { margin: 0 0 .5em; line-height: 1.3; }
+		.csins__total-libelle { display: block; font-size: .85em; opacity: .7; }
+		.csins__total-somme { font-size: 1.35em; font-weight: 700;
+			color: var(--csins-accent, inherit); }
+
+		.csins__ajouter-tout { box-sizing: border-box !important; display: inline-block !important;
+			width: 100%; border: 0; cursor: pointer; text-align: center; text-decoration: none;
+			background: var(--csins-accent, #1d2327); color: #fff;
+			font-family: inherit !important; font-size: .92em !important; font-weight: 600 !important;
+			line-height: 1.3 !important; padding: .7em 1.2em !important; min-height: 0 !important;
+			text-transform: none !important; letter-spacing: normal !important;
+			border-radius: max(4px, calc(var(--csins-rayon, 14px) * .5));
+			transition: opacity .15s ease, transform .12s ease; }
+		.csins__ajouter-tout:hover { opacity: .88; }
+		.csins__ajouter-tout:active { transform: scale(.98); }
+		.csins__ajouter-tout[disabled] { opacity: .5; cursor: default; transform: none; }
+		.csins__note { margin: .5em 0 0; font-size: .82em; line-height: 1.35;
+			opacity: .75; min-height: 1.2em; }
+
+		/* La liste à cocher, sous la rangée : un trait la sépare des vignettes
+		   sans ajouter de cadre — le bloc en a déjà un. */
+		.csins__choix { list-style: none; margin: 1.3em 0 0; padding: 1.2em 0 0;
+			border-top: 1px solid var(--csins-bord); display: grid; gap: .7em; }
+		.csins__choix-item { margin: 0; }
+		.csins__case { display: flex; align-items: flex-start; gap: .6em; cursor: pointer; }
+		.csins__case--sans { cursor: default; padding-left: 1.75em; }
+		.csins__coche { flex: 0 0 auto; margin: .15em 0 0; width: 1.05em; height: 1.05em;
+			accent-color: var(--csins-accent, #1d2327); cursor: pointer; }
+		.csins__etiquette { font-size: .92em; line-height: 1.45; }
+		.csins__cet-article { font-weight: 700; margin-right: .3em; }
+		.csins__etiquette a { color: inherit; text-decoration: none;
+			border-bottom: 1px solid transparent; transition: border-color .15s ease; }
+		.csins__etiquette a:hover { border-bottom-color: currentColor; }
+		.csins__prix { margin-left: .5em; font-weight: 700; white-space: nowrap; }
+		.csins__options { margin-left: .5em; font-size: .88em; opacity: .65; font-style: italic; }
+		.csins__case:has(.csins__coche:not(:checked)) .csins__etiquette { opacity: .5; }
+
+		@media (prefers-reduced-motion: reduce) {
+			.csins__vignette a, .csins__ajouter-tout { transition: none; }
+		}
+		<?php
+		return ob_get_clean();
 	}
 
 	/**
@@ -664,9 +1038,9 @@ final class Cross_Sell_Insights {
 			/* translators: %d: number of items in the cart */
 			$libelle_panier_plusieurs = _n( '%d item in your cart.', '%d items in your cart.', 2, 'cross-sell-insights' );
 			?>
-			var texteUn    = '<?php echo esc_js( $libelle_panier_un ); ?>';
-			var textePlur  = '<?php echo esc_js( $libelle_panier_plusieurs ); ?>';
-			var texteErreur = '<?php echo esc_js( __( 'Could not add to cart. Please try again.', 'cross-sell-insights' ) ); ?>';
+			var texteUn    = <?php echo wp_json_encode( $libelle_panier_un ); ?>;
+			var textePlur  = <?php echo wp_json_encode( $libelle_panier_plusieurs ); ?>;
+			var texteErreur = <?php echo wp_json_encode( __( 'Could not add to cart. Please try again.', 'cross-sell-insights' ) ); ?>;
 
 			function nonceCourant() {
 				if ( nonce ) { return Promise.resolve( nonce ); }
@@ -754,7 +1128,7 @@ final class Cross_Sell_Insights {
 				var libelleOrigine = bouton ? ( estInput ? bouton.value : bouton.textContent ) : '';
 				if ( bouton ) {
 					bouton.disabled = true;
-					var enCoursBouton = '<?php echo esc_js( __( 'Adding…', 'cross-sell-insights' ) ); ?>';
+					var enCoursBouton = <?php echo wp_json_encode( __( 'Adding…', 'cross-sell-insights' ) ); ?>;
 					if ( estInput ) { bouton.value = enCoursBouton; } else { bouton.textContent = enCoursBouton; }
 				}
 
@@ -784,7 +1158,7 @@ final class Cross_Sell_Insights {
 					bouton.disabled = true;
 					ajouter( bouton.dataset.id, 1, [] ).then( function ( reponse ) {
 						rafraichirFragments();
-						bouton.textContent = '<?php echo esc_js( __( 'Added', 'cross-sell-insights' ) ); ?>';
+						bouton.textContent = <?php echo wp_json_encode( __( 'Added', 'cross-sell-insights' ) ); ?>;
 						var n = reponse && reponse.items_count ? reponse.items_count : null;
 						if ( n ) { document.getElementById( 'csins-modal-compte' ).textContent = accord( n, texteUn, textePlur ); }
 					} ).catch( function () {
@@ -929,15 +1303,44 @@ final class Cross_Sell_Insights {
 	}
 
 	/**
-	 * Où proposer les suggestions sur la fiche produit : dans le bloc en bas de
-	 * page, dans une fenêtre à l'ajout au panier, ou les deux à la fois.
+	 * Quels affichages sont actifs sur la fiche produit.
+	 *
+	 * Les deux sont indépendants : le bloc d'achat groupé en bas de fiche et la
+	 * fenêtre à l'ajout au panier peuvent être activés ensemble, séparément, ou
+	 * pas du tout. Ce n'est pas un choix exclusif — ils touchent le client à
+	 * deux moments différents.
+	 *
+	 * Le réglage a d'abord été une chaîne unique ('bloc', 'modal', 'both') ;
+	 * l'ancienne valeur est convertie ici plutôt que par une migration, pour
+	 * qu'un site qui n'a jamais rouvert ses réglages garde son comportement.
+	 *
+	 * @return array{bloc:bool,modal:bool}
 	 */
-	private static function mode_fiche(): string {
-		if ( ! self::store_api_disponible() ) {
-			return 'bloc';
+	private static function modes_actifs(): array {
+		$brut = get_option( 'csins_affichages', null );
+
+		if ( ! is_array( $brut ) ) {
+			// Reprise de l'ancien réglage, ou valeur par défaut pour une
+			// installation neuve : le bloc seul, le moins intrusif des deux.
+			$ancien = get_option( 'csins_mode_fiche', 'bloc' );
+			$brut   = [
+				'bloc'  => 'modal' !== $ancien,
+				'modal' => 'bloc' !== $ancien && in_array( $ancien, [ 'modal', 'both' ], true ),
+			];
 		}
-		$mode = get_option( 'csins_mode_fiche', 'bloc' );
-		return in_array( $mode, [ 'bloc', 'modal', 'both' ], true ) ? $mode : 'bloc';
+
+		$modes = [
+			'bloc'  => ! empty( $brut['bloc'] ),
+			'modal' => ! empty( $brut['modal'] ),
+		];
+
+		// La fenêtre repose sur la Store API : sans elle, on ne propose pas un
+		// affichage qui ne pourrait pas fonctionner.
+		if ( ! self::store_api_disponible() ) {
+			$modes['modal'] = false;
+		}
+
+		return $modes;
 	}
 
 	/**
@@ -1655,7 +2058,7 @@ final class Cross_Sell_Insights {
 			if ( ! bouton || bouton.disabled ) { return; }
 			bouton.disabled = true;
 			bouton.dataset.texteOrigine = bouton.value || bouton.textContent;
-			var enCours = '<?php echo esc_js( __( 'Recalculating…', 'cross-sell-insights' ) ); ?>';
+			var enCours = <?php echo wp_json_encode( __( 'Recalculating…', 'cross-sell-insights' ) ); ?>;
 			if ( 'value' in bouton ) { bouton.value = enCours; } else { bouton.textContent = enCours; }
 		} );
 		</script>
@@ -1775,8 +2178,8 @@ final class Cross_Sell_Insights {
 				var cases  = document.querySelectorAll( 'input[name="reco[]"]' );
 				var compte = document.getElementById( 'csins-compte' );
 				var tout   = document.getElementById( 'csins-tout' );
-				var libUn        = '<?php echo esc_js( $libelle_un ); ?>';
-				var libPlusieurs = '<?php echo esc_js( $libelle_plusieurs ); ?>';
+				var libUn        = <?php echo wp_json_encode( $libelle_un ); ?>;
+				var libPlusieurs = <?php echo wp_json_encode( $libelle_plusieurs ); ?>;
 
 				function rafraichir() {
 					var n = document.querySelectorAll( 'input[name="reco[]"]:checked' ).length;
@@ -1848,23 +2251,25 @@ final class Cross_Sell_Insights {
 		<div class="csins-section">
 		<h2><?php esc_html_e( 'How suggestions are shown', 'cross-sell-insights' ); ?></h2>
 		<?php if ( self::store_api_disponible() ) : ?>
-			<p><?php esc_html_e( "The block sits at the bottom of the page, where the customer may not scroll to. The window opens right after Add to cart, at the moment they are already buying — the two are not mutually exclusive.", 'cross-sell-insights' ); ?></p>
+			<p><?php esc_html_e( "The two are independent, and reach the customer at different moments: the block sits at the bottom of the page, before they have decided; the window opens right after Add to cart, once they already have. Enable either, both, or neither.", 'cross-sell-insights' ); ?></p>
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 				<input type="hidden" name="action" value="csins_mode">
 				<?php wp_nonce_field( 'csins_mode' ); ?>
-				<?php $mode_actuel = self::mode_fiche(); ?>
+				<?php $modes_actuels = self::modes_actifs(); ?>
 				<p>
-					<label style="display:block;margin-bottom:.5em">
-						<input type="radio" name="mode_fiche" value="bloc" <?php checked( $mode_actuel, 'bloc' ); ?>>
-						<?php esc_html_e( 'Block at the bottom of the product page only', 'cross-sell-insights' ); ?>
+					<label style="display:block;margin-bottom:.6em">
+						<input type="checkbox" name="affichage_bloc" value="1" <?php checked( $modes_actuels['bloc'] ); ?>>
+						<strong><?php esc_html_e( 'Bundle block on the product page', 'cross-sell-insights' ); ?></strong><br>
+						<span class="description" style="margin-left:1.8em">
+							<?php esc_html_e( 'The product and its companions side by side, with a total price and a single button to add them all.', 'cross-sell-insights' ); ?>
+						</span>
 					</label>
-					<label style="display:block;margin-bottom:.5em">
-						<input type="radio" name="mode_fiche" value="modal" <?php checked( $mode_actuel, 'modal' ); ?>>
-						<?php esc_html_e( 'Window on Add to cart only', 'cross-sell-insights' ); ?>
-					</label>
-					<label style="display:block;margin-bottom:.5em">
-						<input type="radio" name="mode_fiche" value="both" <?php checked( $mode_actuel, 'both' ); ?>>
-						<?php esc_html_e( 'Both', 'cross-sell-insights' ); ?>
+					<label style="display:block;margin-bottom:.6em">
+						<input type="checkbox" name="affichage_modal" value="1" <?php checked( $modes_actuels['modal'] ); ?>>
+						<strong><?php esc_html_e( 'Window on Add to cart', 'cross-sell-insights' ); ?></strong><br>
+						<span class="description" style="margin-left:1.8em">
+							<?php esc_html_e( 'Opens over the page the moment an item is added, showing its companions.', 'cross-sell-insights' ); ?>
+						</span>
 					</label>
 				</p>
 				<p class="description"><?php esc_html_e( "The window calls WooCommerce's own cart API in the browser, so the page never reloads. If the theme's Add to cart button already does something similar, test this on a staging copy of the site before turning it on everywhere.", 'cross-sell-insights' ); ?></p>
@@ -2585,7 +2990,7 @@ final class Cross_Sell_Insights {
 				    label = $src.find( 'option:selected' ).text();
 
 				if ( ! id ) {
-					window.alert( '<?php echo esc_js( __( 'Choose a product first.', 'cross-sell-insights' ) ); ?>' );
+					window.alert( <?php echo wp_json_encode( __( 'Choose a product first.', 'cross-sell-insights' ) ); ?> );
 					return;
 				}
 
@@ -2808,14 +3213,20 @@ final class Cross_Sell_Insights {
 		}
 		check_admin_referer( 'csins_mode' );
 
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- nonce checked above via check_admin_referer(); sanitized on the next line.
-		$mode = isset( $_POST['mode_fiche'] ) ? sanitize_key( wp_unslash( $_POST['mode_fiche'] ) ) : 'bloc';
-		if ( ! in_array( $mode, [ 'bloc', 'modal', 'both' ], true ) || ! self::store_api_disponible() ) {
-			$mode = 'bloc';
-		}
+		// Deux cases indépendantes : leur seule absence du POST vaut « décochée »,
+		// ce qui rend possible de tout désactiver — un état légitime, si
+		// l'administrateur ne veut du plugin que son écran de diagnostic.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- nonce vérifié ci-dessus par check_admin_referer() ; seule la présence des clés est lue.
+		$affichages = [
+			'bloc'  => isset( $_POST['affichage_bloc'] ),
+			'modal' => isset( $_POST['affichage_modal'] ) && self::store_api_disponible(),
+		];
 
-		// Autochargée : lue à chaque fiche produit, via mode_fiche().
-		update_option( 'csins_mode_fiche', $mode, true );
+		// Autochargée : lue à chaque fiche produit, via modes_actifs().
+		update_option( 'csins_affichages', $affichages, true );
+		// L'ancien réglage ne doit plus servir de repli une fois un choix
+		// explicite enregistré, sinon il reviendrait au premier réglage vidé.
+		delete_option( 'csins_mode_fiche' );
 
 		wp_safe_redirect( admin_url( 'admin.php?page=cross-sell-insights&onglet=reglages&mode=1' ) );
 		exit;

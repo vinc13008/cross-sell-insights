@@ -486,6 +486,171 @@ n'a pas joué).
   rejoué de bout en bout dans cette session ; il l'avait été lors des versions
   précédentes.
 
+## Deuxième campagne — le bloc d'achat groupé (2026-08-25)
+
+Portée : tout le code écrit après la clôture de la première campagne — bloc
+d'achat groupé (`afficher_bloc`, `css_bloc`, `script_bloc`), réglages en cases
+indépendantes (`modes_actifs`, `enregistrer_mode`), lecture des deux rangements
+de commandes, reprise des données de l'ancien préfixe.
+
+État de référence avant modification : `php -l` sans erreur, `wp plugin check`
+sans remontée sur le code, `wp i18n make-pot` sans avertissement.
+
+### [MAJEUR] Un double affichage du bloc fait payer le double
+
+- **Statut** : CONFIRMÉ (reproduit en navigateur, panier réel à l'appui)
+- **Où** : `afficher_bloc()` — absence de garde-fou contre un second appel
+- **Déclencheur** : un thème ou une extension qui déclenche deux fois le crochet
+  `woocommerce_after_single_product_summary` (aperçu rapide, résumé collant).
+- **Conséquence** : deux blocs rendus, donc des identifiants HTML en double
+  (`csins-total`, `csins-ajouter-tout`, `csins-note`). Le script du second bloc
+  se lie par `getElementById` aux éléments du PREMIER : le bouton se retrouve
+  avec deux gestionnaires, et **un seul clic déclenche deux séries d'ajouts**.
+  Le client lit « Prix total : 79,70 € », clique une fois, et se retrouve avec
+  6 articles pour 159,40 €.
+- **Preuve** : bloc rendu deux fois, session panier vierge, un clic →
+  `articles=6 | total_price=15940`, soit exactement le double du total annoncé
+  (`$79.70`).
+- **Falsification** : aucun garde-fou ailleurs — `grep deja_affiche` ne
+  trouvait cette protection que dans `afficher_modal()` ; cas non impossible
+  (reproduit, et la présence du garde-fou côté fenêtre atteste que le scénario
+  avait déjà été jugé atteignable) ; non intentionnel — les deux affichages
+  auraient la même protection s'il s'agissait d'un choix.
+- **Correctif** : même garde-fou statique que la fenêtre, un seul bloc par page.
+- **Validation** : bloc rendu deux fois, session vierge, un clic →
+  `articles=3 | total=79.70`, conforme au total annoncé, sans erreur JS.
+
+### [MINEUR] Total à zéro et bouton mort quand rien n'est ajoutable
+
+- **Statut** : CONFIRMÉ (reproduit)
+- **Où** : `afficher_bloc()` — total et bouton rendus sans condition
+- **Déclencheur** : une fiche dont ni le produit consulté ni aucune suggestion
+  ne peut s'ajouter en un clic (que des produits variables). Cas courant d'une
+  boutique dont le catalogue est entièrement configurable.
+- **Conséquence** : le bloc affichait « Prix total : 0,00 € » et un bouton
+  désactivé « Sélectionnez au moins un article », sans qu'aucune case existe
+  pour le satisfaire. Une commande morte, qui donne l'impression d'une boutique
+  cassée.
+- **Preuve** : produit variable dont l'unique suggestion est variable →
+  `vraies cases à cocher : 0`, bloc total et bouton pourtant présents.
+- **Falsification** : aucun garde-fou ; cas non impossible (reproduit) ; non
+  intentionnel — la dégradation prévue était de retirer la case de l'article
+  concerné, pas d'afficher une commande inutilisable.
+- **Correctif** : total et bouton ne sont rendus que s'il existe au moins un
+  article éligible ; la rangée de vignettes et la liste restent, elles gardent
+  leur valeur de suggestion. Le script sort proprement quand les commandes sont
+  absentes, au lieu de déréférencer des éléments nuls.
+- **Validation** : cas dégénéré → section rendue, total et bouton absents,
+  suggestions conservées, aucune erreur JS.
+
+### [PROPOSITION] Purge intégrale du cache objet à la reprise des données
+
+- **Statut** : appliquée
+- **Où** : `reprendre_donnees_bit()`
+- **Description** : le renommage des métadonnées se faisait en SQL direct, suivi
+  d'un `wp_cache_flush()`. Correct, mais brutal : sur un site sous Redis, cela
+  évince tout le cache et provoque un pic de charge, là où seules les fiches
+  touchées ont besoin d'être invalidées.
+- **Correctif** : les fiches concernées sont relevées avant le renommage, puis
+  invalidées une à une par `wp_cache_delete( $id, 'post_meta' )`.
+- **Validation** : reprise rejouée intégralement — options, métadonnées et
+  drapeau conformes, anciennes clés effacées.
+
+### Hypothèses écartées après vérification
+
+- **Le produit courant en double dans la rangée** : `suggestions_pour()`
+  s'auto-exclut explicitement (`$id === $produit->get_id()`). Aucun doublon
+  possible.
+- **Écart entre le total annoncé et le panier réel** : soupçonné à cause des
+  arrondis de TVA. Vérifié avec une TVA à 20 %, prix saisis TTC, affichage TTC :
+  bloc `$79.70`, panier réel `total_price=7970`. **Aucun écart.** Le prix par
+  article vient de `wc_get_price_to_display()`, la même source que le prix
+  affiché par `get_price_html()`.
+- **Conversion de l'ancien réglage exclusif** : les cinq chemins vérifiés —
+  `bloc` → bloc seul, `modal` → fenêtre seule, `both` → les deux, absence de
+  réglage → bloc seul, choix explicite « rien » → rien. Une première lecture
+  semblait montrer une conversion fautive de `both` ; c'était un artefact de mon
+  test (une option `csins_affichages` laissée par un essai antérieur court-
+  circuitait la conversion), pas un défaut du code.
+
+### Contrôles finaux
+
+`php -l` sans erreur sur les deux fichiers, `wp plugin check` sans aucune
+remontée sur le code, `wp i18n make-pot` sans avertissement.
+
+## Troisième campagne — ce que la deuxième n'avait pas couvert (2026-08-25)
+
+Portée : coexistence du bloc et de la fenêtre (combinaison nouvellement
+possible depuis que les réglages sont deux cases indépendantes), échappement
+des chaînes injectées en JavaScript, accessibilité du bloc.
+
+### [MAJEUR] Les URL destinées à JavaScript étaient échappées pour le HTML
+
+- **Statut** : CONFIRMÉ (mécanisme démontré)
+- **Où** : `script_bloc()` — `var base` et `var panier` ; même famille de défaut
+  sur 15 autres chaînes de la fenêtre et de l'écran d'administration.
+- **Déclencheur** : une URL contenant une esperluette. C'est le cas dès qu'un
+  filtre ajoute un paramètre à `rest_url()` — WPML et Polylang y accolent
+  `&lang=xx`, et le site n'a rien de particulier à faire pour ça.
+- **Conséquence** : `esc_url()` échappe pour le HTML, où `&` devient `&#038;`.
+  Placé dans une chaîne JavaScript, ce n'est plus une URL mais un texte
+  contenant littéralement `&#038;`. L'appel à la Store API partirait vers une
+  adresse inexistante : **le bloc d'achat groupé cesserait entièrement de
+  fonctionner sur un site multilingue**, sans message d'erreur autre que
+  « impossible d'ajouter au panier ». Même mécanisme pour `esc_js()` sur les
+  libellés : une traduction contenant `&` s'afficherait « &amp;amp; » au client.
+- **Preuve** : `esc_url("…/v1/&lang=fr")` renvoie `…/v1/&#038;lang=fr` ;
+  `esc_js("Voir le panier & continuer")` renvoie `Voir le panier &amp;amp; continuer`.
+- **Falsification** : pas de garde-fou ailleurs (la valeur part telle quelle
+  dans le script) ; cas non impossible — un site multilingue suffit ; non
+  intentionnel — `esc_url()` est le bon échappement dans un attribut HTML,
+  c'est d'ailleurs ce que fait la fenêtre pour son `data-rest`, correctement.
+  L'erreur est d'avoir repris ce réflexe dans un contexte JavaScript.
+- **Correctif** : les 17 occurrences passent à `wp_json_encode()`, qui produit
+  un littéral JavaScript complet — guillemets compris, d'où leur retrait — et
+  neutralise en prime une fermeture `</script>` glissée dans une traduction.
+  Les URL sont préalablement nettoyées par `esc_url_raw()`.
+- **Validation** : filtre `rest_url` simulant un site multilingue → l'URL rendue
+  contient bien `&lang=fr` et non `&#038;`. Parcours d'achat complet rejoué
+  ensuite sans régression.
+
+### [MINEUR] Le total changeait en silence pour un lecteur d'écran
+
+- **Statut** : CONFIRMÉ
+- **Où** : `afficher_bloc()` — `<strong id="csins-total">`
+- **Déclencheur** : cocher ou décocher un article avec un lecteur d'écran actif.
+- **Conséquence** : le montant se met à jour sans qu'aucun élément ne prenne le
+  focus. Rien n'était annoncé : la seule information que le client vient de
+  modifier lui restait inaccessible.
+- **Falsification** : la note de confirmation portait bien `role="status"`, mais
+  elle ne sert qu'après l'ajout ; rien ne couvrait le total. Le bouton change
+  aussi de libellé, mais ce n'est annoncé que s'il a le focus, ce qui n'est pas
+  le cas quand on manipule les cases.
+- **Correctif** : `aria-live="polite"` sur le total.
+
+### Le reste de l'accessibilité — vérifié, aucun défaut
+
+Texte alternatif présent et parlant sur les vignettes (fourni par WooCommerce,
+c'est le nom du produit) ; le séparateur « + », purement décoratif, porte
+`aria-hidden="true"` ; la note de confirmation est en `role="status"` ; chaque
+case est enveloppée dans son `<label>`.
+
+### Hypothèse écartée après vérification
+
+- **Conflit entre le bloc et la fenêtre** : les deux étant désormais activables
+  ensemble, chacun avec son propre script et son propre jeton Store API, un
+  premier essai a montré un ajout en échec. Diagnostic : artefact de mon banc
+  de test, pas du code — `wp_json_encode()` échappe les barres obliques
+  (`http:\/\/localhost`), ce qui faisait échouer la réécriture d'hôte de ma
+  page de test, et le navigateur visait un serveur injoignable. Test corrigé :
+  bloc et fenêtre sur la même page, 3 articles ajoutés pour le total annoncé,
+  aucune erreur JavaScript.
+
+### Contrôles finaux
+
+`php -l` sans erreur, `wp plugin check` sans remontée sur le code, parcours
+complet et interaction des cases rejoués sans régression.
+
 ## Suites données après l'audit
 
 - **Prise en charge du stockage classique des commandes** (constat MAJEUR du

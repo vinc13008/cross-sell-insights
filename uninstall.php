@@ -20,7 +20,7 @@ defined( 'WP_UNINSTALL_PLUGIN' ) || exit;
 // sans que la reprise ait pu s'exécuter. On les retire aussi, pour ne rien
 // laisser derrière soi.
 $csins_prefixes = [ 'csins_', 'bit_' ];
-$csins_cles     = [ 'regles', 'exclus', 'non_recommandes', 'sans_suggestions', 'historique', 'dernier_calcul', 'mode_fiche', 'modal_style' ];
+$csins_cles     = [ 'regles', 'exclus', 'non_recommandes', 'sans_suggestions', 'historique', 'dernier_calcul', 'mode_fiche', 'affichages', 'modal_style' ];
 foreach ( $csins_prefixes as $csins_prefixe ) {
 	foreach ( $csins_cles as $csins_cle ) {
 		delete_option( $csins_prefixe . $csins_cle );
