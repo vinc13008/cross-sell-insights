@@ -4,7 +4,7 @@ Tags: woocommerce, cross-sells, related products, upsell, recommendations
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 1.1.0
+Stable tag: 1.2.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -96,6 +96,11 @@ Yes. It reads orders from the HPOS tables directly.
 3. The suggestion block as customers see it.
 
 == Changelog ==
+
+= 1.2.0 =
+* New: an optional window can open right after "Add to cart" on the product page, showing the same suggestions with their own "Add" buttons — the customer never leaves the page. Uses WooCommerce's own public cart API (Store API), so it works alongside whatever the theme's Add to cart button already does.
+* New setting under Product page suggestions: show the suggestions as the existing block, as the new window, or both. Off by default — existing sites keep their current behaviour until this is turned on. Requires WooCommerce 8.3 or later; the option is hidden with an explanation on older versions.
+* The window's own quick-add buttons only appear for simple products; variable products link to their page instead, since picking a variation needs its own screen.
 
 = 1.1.0 =
 * Brand mark added next to the screen title, matching the plugin directory icon.

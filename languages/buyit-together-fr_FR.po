@@ -2,9 +2,9 @@
 # This file is distributed under the GPL-2.0-or-later license.
 msgid ""
 msgstr ""
-"Project-Id-Version: BuyIt Together 1.0.0\n"
-"POT-Creation-Date: 2026-08-24T00:00:00+00:00\n"
-"PO-Revision-Date: 2026-08-24T00:00:00+00:00\n"
+"Project-Id-Version: BuyIt Together 1.1.0\n"
+"POT-Creation-Date: 2026-08-25T00:00:00+00:00\n"
+"PO-Revision-Date: 2026-08-25T00:00:00+00:00\n"
 "Last-Translator: POWERLOOP\n"
 "Language-Team: Français\n"
 "Language: fr_FR\n"
@@ -38,6 +38,11 @@ msgid "%d product restored to its previous cross-sells."
 msgid_plural "%d products restored to their previous cross-sells."
 msgstr[0] "%d produit restauré à ses ventes croisées précédentes."
 msgstr[1] "%d produits restaurés à leurs ventes croisées précédentes."
+
+msgid "%d item in your cart."
+msgid_plural "%d items in your cart."
+msgstr[0] "%d article dans votre panier."
+msgstr[1] "%d articles dans votre panier."
 
 msgctxt "one row selected"
 msgid "%d selected"
@@ -421,3 +426,54 @@ msgstr "Règles enregistrées."
 
 msgid "Saved. These product pages are out of the recommendations table."
 msgstr "Enregistré. Ces fiches produit sont retirées du tableau de recommandations."
+
+msgid "Add"
+msgstr "Ajouter"
+
+msgid "Added"
+msgstr "Ajouté"
+
+msgid "Added to your cart."
+msgstr "Ajouté à votre panier."
+
+msgid "Adding…"
+msgstr "Ajout en cours…"
+
+msgid "Block at the bottom of the product page only"
+msgstr "Bloc en bas de la fiche produit uniquement"
+
+msgid "Both"
+msgstr "Les deux"
+
+msgid "Close"
+msgstr "Fermer"
+
+msgid "Continue shopping"
+msgstr "Continuer les achats"
+
+msgid "Could not add to cart. Please try again."
+msgstr "Impossible d'ajouter au panier. Veuillez réessayer."
+
+msgid "How suggestions are shown"
+msgstr "Où afficher les suggestions"
+
+msgid "Save"
+msgstr "Enregistrer"
+
+msgid "Saved."
+msgstr "Enregistré."
+
+msgid "The Add to cart window needs WooCommerce 8.3 or later (this site runs %s). The block below stays available regardless."
+msgstr "La fenêtre d'ajout au panier nécessite WooCommerce 8.3 ou plus récent (ce site utilise la %s). Le bloc ci-dessous reste disponible dans tous les cas."
+
+msgid "The block sits at the bottom of the page, where the customer may not scroll to. The window opens right after Add to cart, at the moment they are already buying — the two are not mutually exclusive."
+msgstr "Le bloc se trouve en bas de page, là où le client ne fait pas toujours défiler. La fenêtre s'ouvre juste après l'ajout au panier, au moment où il est déjà en train d'acheter — les deux ne s'excluent pas."
+
+msgid "The window calls WooCommerce's own cart API in the browser, so the page never reloads. If the theme's Add to cart button already does something similar, test this on a staging copy of the site before turning it on everywhere."
+msgstr "La fenêtre appelle l'API du panier de WooCommerce directement dans le navigateur, la page ne recharge donc jamais. Si le bouton Ajouter au panier du thème fait déjà quelque chose de semblable, testez sur une copie du site avant de l'activer partout."
+
+msgid "View cart"
+msgstr "Voir le panier"
+
+msgid "Window on Add to cart only"
+msgstr "Fenêtre à l'ajout au panier uniquement"

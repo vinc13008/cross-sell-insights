@@ -168,6 +168,39 @@ Le panneau d'attribution en masse de l'éditeur par catégorie reste visible en
 défilant une longue liste (`position: sticky`), pour ne pas forcer un
 aller-retour en haut de page à chaque application.
 
+### La fenêtre d'ajout au panier
+
+Réglage `bit_mode_fiche` (`bloc` par défaut, `modal`, ou `both`), choisi dans
+l'onglet Suggestions sur la fiche produit. Masqué et forcé à `bloc` si
+`store_api_disponible()` renvoie faux (WooCommerce < 8.3) : sans la Store API
+stable en cœur, la fenêtre ne fonctionnerait pas, mieux vaut ne pas proposer
+le choix que de le laisser choisir une option cassée.
+
+Le formulaire d'ajout de WooCommerce recharge la page par défaut ; la fenêtre
+l'intercepte donc côté client et appelle elle-même l'API REST publique du
+panier (Store API : `GET /wc/store/v1/cart` pour le jeton, puis
+`POST .../cart/add-item`), le jeton étant renouvelé à chaque réponse. Après un
+ajout réussi, `wc_fragment_refresh` est déclenché plutôt que reconstruit à la
+main : c'est déjà le mécanisme que les thèmes écoutent pour rafraîchir leur
+propre compteur de panier, pas la peine d'en inventer un second.
+
+L'interception se fait en phase de capture, sur `document` plutôt que sur le
+formulaire lui-même : un gestionnaire posé par le thème s'exécute forcément
+après, quel que soit l'ordre de chargement des scripts, et
+`stopImmediatePropagation()` l'empêche de s'exécuter à son tour — sans cela,
+le produit s'ajouterait deux fois. Un identifiant de produit sur le bouton
+n'est pas capturé par `new FormData(form)` sans préciser le bouton cliqué : il
+faut aller le lire directement sur le bouton (`name="add-to-cart"`).
+
+Aucun `window.alert()` : une boîte native bloquante gênerait le rendu de la
+main à WooCommerce en cas d'échec (constaté en testant l'interface — une
+alerte laissée en place bloquait complètement le processus de rendu). Un
+message discret et auto-effaçant (`role="alert"`) le remplace.
+
+Les suggestions ne proposent un ajout direct en un clic que pour les produits
+simples (`WC_Product::is_type('simple')`) ; un produit à variations renvoie
+vers sa fiche, faute d'écran pour choisir une variation dans la fenêtre.
+
 ## Compatibilité
 
 WooCommerce avec stockage HPOS (`wp_wc_orders`), PHP 8.0+, WordPress 6.0+.

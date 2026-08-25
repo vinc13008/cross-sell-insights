@@ -3,7 +3,7 @@
  * Plugin Name:       BuyIt Together
  * Plugin URI:        https://github.com/vinc13008/buyit-together
  * Description:       Shows on each product page the parts customers actually bought with it, deduced from your order history. No per-product setup: associations are recalculated weekly.
- * Version:           1.1.0
+ * Version:           1.2.0
  * Requires at least: 6.0
  * Requires PHP:      8.0
  * Author:            POWERLOOP
@@ -58,6 +58,7 @@ final class BuyIt_Together {
 		add_action( 'admin_post_bit_annuler', [ self::class, 'annuler_masse' ] );
 		add_action( 'admin_post_bit_recos', [ self::class, 'appliquer_recos' ] );
 		add_action( 'admin_post_bit_editeur', [ self::class, 'enregistrer_editeur' ] );
+		add_action( 'admin_post_bit_mode', [ self::class, 'enregistrer_mode' ] );
 		add_filter( 'bit_compagnons', [ self::class, 'repli_regles' ], 10, 2 );
 
 		if ( ! wp_next_scheduled( self::CRON ) ) {
@@ -210,16 +211,19 @@ final class BuyIt_Together {
 
 	// --------------------------------------------------------------- affichage --
 
-	public static function afficher(): void {
-		global $product;
-
-		if ( ! $product instanceof WC_Product ) {
-			return;
-		}
-
+	/**
+	 * Compagnons calculés d'un produit, prêts à afficher.
+	 *
+	 * Isolé d'afficher() pour que le bloc de fiche et la fenêtre d'ajout au
+	 * panier partagent exactement la même liste — deux calculs séparés
+	 * auraient fini par diverger au premier réglage touché d'un seul côté.
+	 *
+	 * @return WC_Product[]
+	 */
+	private static function suggestions_pour( WC_Product $produit ): array {
 		// Ordre de priorité : saisie manuelle, puis calcul, puis règles de repli.
-		$manuel = get_post_meta( $product->get_id(), self::META_MANUEL, true );
-		$calcul = get_post_meta( $product->get_id(), self::META, true );
+		$manuel = get_post_meta( $produit->get_id(), self::META_MANUEL, true );
+		$calcul = get_post_meta( $produit->get_id(), self::META, true );
 
 		$ids = array_merge(
 			is_array( $manuel ) ? $manuel : [],
@@ -230,7 +234,7 @@ final class BuyIt_Together {
 		 * Permet d'ajouter un repli (par exemple le kit d'outils sur les pièces
 		 * structurelles) quand l'historique ne fournit encore aucune association.
 		 */
-		$ids = apply_filters( 'bit_compagnons', $ids, $product );
+		$ids = apply_filters( 'bit_compagnons', $ids, $produit );
 
 		// Filtré ici aussi, et pas seulement au calcul : un produit exclu ne doit
 		// jamais s'afficher, y compris s'il vient d'une saisie manuelle ou d'une
@@ -239,7 +243,7 @@ final class BuyIt_Together {
 
 		$produits = [];
 		foreach ( array_unique( array_map( 'intval', $ids ) ) as $id ) {
-			if ( $id === $product->get_id() || isset( $exclus[ $id ] ) ) {
+			if ( $id === $produit->get_id() || isset( $exclus[ $id ] ) ) {
 				continue;
 			}
 			$p = wc_get_product( $id );
@@ -248,10 +252,33 @@ final class BuyIt_Together {
 			}
 		}
 
+		return $produits;
+	}
+
+	public static function afficher(): void {
+		global $product;
+
+		if ( ! $product instanceof WC_Product ) {
+			return;
+		}
+
+		$produits = self::suggestions_pour( $product );
 		if ( ! $produits ) {
 			return;
 		}
 
+		$mode = self::mode_fiche();
+
+		if ( 'modal' !== $mode ) {
+			self::afficher_bloc( $produits );
+		}
+		if ( 'bloc' !== $mode ) {
+			self::afficher_modal( $product, $produits );
+		}
+	}
+
+	/** Le bloc statique, affiché en bas de la fiche produit. */
+	private static function afficher_bloc( array $produits ): void {
 		$titre = apply_filters(
 			'bit_titre',
 			__( 'Frequently bought with this part', 'buyit-together' )
@@ -289,6 +316,257 @@ final class BuyIt_Together {
 			.bit__prix { display: block; padding: .35em .8em .8em; font-weight: 600; font-size: .95em; }
 			@media (prefers-reduced-motion: reduce) { .bit__lien { transition: none; } }
 		</style>
+		<?php
+	}
+
+	/**
+	 * Fenêtre déclenchée à l'ajout au panier, avec les compagnons du produit.
+	 *
+	 * L'ajout lui-même passe par l'API REST publique du panier (Store API),
+	 * appelée en JavaScript : c'est la seule manière de garder le client sur la
+	 * page pour lui montrer la fenêtre, plutôt que de subir le rechargement
+	 * complet qu'un simple <form method="post"> déclencherait par défaut.
+	 *
+	 * L'interception du formulaire se fait en phase de capture, sur le document
+	 * plutôt que sur le formulaire lui-même : un gestionnaire posé par le thème
+	 * s'exécute forcément après, quel que soit l'ordre de chargement des scripts,
+	 * et stopImmediatePropagation() l'empêche de s'exécuter à son tour — sans
+	 * cela, le produit s'ajouterait deux fois.
+	 */
+	private static function afficher_modal( WC_Product $produit, array $produits ): void {
+		static $deja_affiche = false;
+		if ( $deja_affiche ) {
+			return; // un seul modal par page, même si le hook était appelé deux fois
+		}
+		$deja_affiche = true;
+		?>
+		<dialog id="bit-modal" class="bit-modal"
+		        data-produit="<?php echo (int) $produit->get_id(); ?>"
+		        data-rest="<?php echo esc_url( rest_url( 'wc/store/v1/' ) ); ?>"
+		        data-panier="<?php echo esc_url( wc_get_cart_url() ); ?>">
+			<div class="bit-modal__panneau">
+				<button type="button" class="bit-modal__fermer" aria-label="<?php esc_attr_e( 'Close', 'buyit-together' ); ?>">&times;</button>
+				<p class="bit-modal__ajoute">
+					<?php esc_html_e( 'Added to your cart.', 'buyit-together' ); ?>
+					<span id="bit-modal-compte"></span>
+				</p>
+				<h3 class="bit-modal__titre">
+					<?php echo esc_html( apply_filters( 'bit_titre', __( 'Frequently bought with this part', 'buyit-together' ) ) ); ?>
+				</h3>
+				<ul class="bit-modal__liste">
+					<?php foreach ( $produits as $p ) :
+						// Une variation exige de choisir ses options avant de s'ajouter ;
+						// pas de raccourci fiable ici, on renvoie vers sa fiche à la place.
+						$ajoutable = $p->is_type( 'simple' );
+						?>
+						<li class="bit-modal__item">
+							<a href="<?php echo esc_url( $p->get_permalink() ); ?>">
+								<?php echo wp_kses_post( $p->get_image( 'woocommerce_thumbnail' ) ); ?>
+								<span class="bit-modal__nom"><?php echo esc_html( $p->get_name() ); ?></span>
+								<span class="bit-modal__prix"><?php echo wp_kses_post( $p->get_price_html() ); ?></span>
+							</a>
+							<?php if ( $ajoutable ) : ?>
+								<button type="button" class="button bit-modal__ajouter" data-id="<?php echo (int) $p->get_id(); ?>">
+									<?php esc_html_e( 'Add', 'buyit-together' ); ?>
+								</button>
+							<?php else : ?>
+								<a class="button bit-modal__voir" href="<?php echo esc_url( $p->get_permalink() ); ?>">
+									<?php esc_html_e( 'View product', 'buyit-together' ); ?>
+								</a>
+							<?php endif; ?>
+						</li>
+					<?php endforeach; ?>
+				</ul>
+				<div class="bit-modal__pied">
+					<a class="button" href="<?php echo esc_url( wc_get_cart_url() ); ?>"><?php esc_html_e( 'View cart', 'buyit-together' ); ?></a>
+					<button type="button" class="bit-modal__continuer"><?php esc_html_e( 'Continue shopping', 'buyit-together' ); ?></button>
+				</div>
+			</div>
+		</dialog>
+		<style>
+			.bit-modal { border: 0; border-radius: 8px; padding: 0; max-width: 480px; width: calc(100% - 2em); }
+			.bit-modal::backdrop { background: rgba(0,0,0,.5); }
+			.bit-modal__panneau { position: relative; padding: 1.6em; }
+			.bit-modal__fermer { position: absolute; top: .6em; right: .6em; width: 2em; height: 2em;
+				border: 0; background: transparent; font-size: 1.4em; line-height: 1; cursor: pointer; color: #666; }
+			.bit-modal__ajoute { margin: 0 0 1em; padding-right: 2em; font-weight: 600; }
+			.bit-modal__titre { font-size: 1em; margin: 0 0 .8em; }
+			.bit-modal__liste { list-style: none; margin: 0 0 1.2em; padding: 0;
+				display: grid; gap: .9em; max-height: 45vh; overflow-y: auto; }
+			.bit-modal__item { display: flex; align-items: center; gap: .8em; }
+			.bit-modal__item a:first-child { display: flex; align-items: center; gap: .8em; flex: 1 1 auto;
+				min-width: 0; text-decoration: none; color: inherit; }
+			.bit-modal__item img { width: 48px; height: 48px; object-fit: cover; border-radius: 4px; flex: 0 0 auto; }
+			.bit-modal__nom { font-size: .92em; line-height: 1.3; }
+			.bit-modal__prix { display: block; font-size: .85em; font-weight: 600; opacity: .8; }
+			.bit-modal__ajouter, .bit-modal__voir { flex: 0 0 auto; white-space: nowrap; }
+			.bit-modal__ajouter[disabled] { opacity: .6; cursor: default; }
+			.bit-modal__pied { display: flex; gap: .8em; align-items: center; }
+			.bit-modal__continuer { background: none; border: 0; text-decoration: underline; cursor: pointer;
+				color: inherit; font-size: .92em; padding: 0; }
+			@media (prefers-reduced-motion: reduce) { .bit-modal { animation: none; } }
+			.bit-avertir { position: fixed; bottom: 1.2em; right: 1.2em; left: auto; max-width: 320px;
+				background: #d63638; color: #fff; padding: .8em 1.1em; border-radius: 6px;
+				font-size: .9em; box-shadow: 0 4px 14px rgba(0,0,0,.2); z-index: 100000; }
+		</style>
+		<script>
+		( function () {
+			var dialogue = document.getElementById( 'bit-modal' );
+			// Pas de <dialog> côté navigateur (très ancien, ou désactivé) : on ne
+			// touche à rien plutôt que de casser l'ajout au panier normal.
+			if ( ! dialogue || typeof dialogue.showModal !== 'function' ) { return; }
+
+			var base       = dialogue.dataset.rest;
+			var idProduit  = dialogue.dataset.produit;
+			var conteneur  = 'product-' + idProduit;
+			var nonce      = null;
+			<?php
+			// Les deux formes sont fournies telles quelles, avec leur « %d » ; la
+			// valeur réelle n'est connue qu'à l'ajout, côté navigateur — c'est donc
+			// le script qui choisit laquelle utiliser et fait le remplacement.
+			/* translators: %d: number of items in the cart (singular form) */
+			$libelle_panier_un = _n( '%d item in your cart.', '%d items in your cart.', 1, 'buyit-together' );
+			/* translators: %d: number of items in the cart (plural form) */
+			$libelle_panier_plusieurs = _n( '%d item in your cart.', '%d items in your cart.', 2, 'buyit-together' );
+			?>
+			var texteUn    = '<?php echo esc_js( $libelle_panier_un ); ?>';
+			var textePlur  = '<?php echo esc_js( $libelle_panier_plusieurs ); ?>';
+			var texteErreur = '<?php echo esc_js( __( 'Could not add to cart. Please try again.', 'buyit-together' ) ); ?>';
+
+			function nonceCourant() {
+				if ( nonce ) { return Promise.resolve( nonce ); }
+				return fetch( base + 'cart', { credentials: 'same-origin' } )
+					.then( function ( r ) { nonce = r.headers.get( 'Nonce' ); return nonce; } );
+			}
+
+			function ajouter( id, quantite, variation ) {
+				var corps = { id: parseInt( id, 10 ), quantity: quantite || 1 };
+				if ( variation && variation.length ) { corps.variation = variation; }
+				return nonceCourant().then( function ( n ) {
+					return fetch( base + 'cart/add-item', {
+						method: 'POST',
+						credentials: 'same-origin',
+						headers: { 'Content-Type': 'application/json', 'Nonce': n },
+						body: JSON.stringify( corps ),
+					} );
+				} ).then( function ( r ) {
+					var n2 = r.headers.get( 'Nonce' );
+					if ( n2 ) { nonce = n2; } // le jeton tourne à chaque appel
+					if ( ! r.ok ) { throw new Error( 'add failed' ); }
+					return r.json();
+				} );
+			}
+
+			function rafraichirFragments() {
+				// Laisse WooCommerce mettre à jour lui-même le compteur du panier
+				// dans l'en-tête du thème, où qu'il soit sur la page : c'est le
+				// mécanisme que les thèmes écoutent déjà, pas la peine d'en refaire un.
+				if ( window.jQuery ) { window.jQuery( document.body ).trigger( 'wc_fragment_refresh' ); }
+			}
+
+			function accord( n, un, plusieurs ) {
+				return ( 1 === n ? un : plusieurs ).replace( '%d', n );
+			}
+
+			// Une erreur qui s'efface d'elle-même, plutôt qu'une boîte native
+			// bloquante : celle-ci peut survenir juste avant qu'on rende la main
+			// à WooCommerce, pas question de retarder ça pour un clic sur « OK ».
+			function avertir( message ) {
+				var existant = document.getElementById( 'bit-avertir' );
+				if ( existant ) { existant.remove(); }
+				var el = document.createElement( 'div' );
+				el.id = 'bit-avertir';
+				el.className = 'bit-avertir';
+				el.setAttribute( 'role', 'alert' );
+				el.textContent = message;
+				document.body.appendChild( el );
+				setTimeout( function () { el.remove(); }, 6000 );
+			}
+
+			// --- Interception du formulaire principal --------------------------
+			document.addEventListener( 'submit', function ( e ) {
+				var form = e.target;
+				if ( ! form.matches || ! form.matches( 'form.cart' ) ) { return; }
+				var carte = form.closest( '[id="' + conteneur + '"]' );
+				if ( ! carte ) { return; } // pas le formulaire de CE produit — on n'y touche pas
+
+				e.preventDefault();
+				e.stopImmediatePropagation();
+
+				var donnees = new FormData( form );
+				// Sur la fiche produit, WooCommerce pose l'identifiant du produit
+				// sur le bouton lui-même (name="add-to-cart" value="123"), pas sur
+				// un champ caché séparé. FormData(form) sans préciser quel contrôle
+				// a déclenché l'envoi ne le capture pas — il faut aller le lire.
+				var boutonEnvoi = form.querySelector( 'button[type="submit"], input[type="submit"]' );
+				var idBouton    = boutonEnvoi && 'add-to-cart' === boutonEnvoi.name ? boutonEnvoi.value : null;
+				var idAjout     = donnees.get( 'variation_id' ) && '0' !== donnees.get( 'variation_id' )
+					? donnees.get( 'variation_id' )
+					: ( donnees.get( 'add-to-cart' ) || idBouton );
+				var quantite  = parseInt( donnees.get( 'quantity' ) || '1', 10 );
+				var variation = [];
+				donnees.forEach( function ( valeur, cle ) {
+					if ( 0 === cle.indexOf( 'attribute_' ) ) {
+						variation.push( { attribute: cle.replace( 'attribute_', '' ), value: valeur } );
+					}
+				} );
+
+				var bouton = boutonEnvoi;
+				// Sur un <button>, .value est l'identifiant du produit, pas le
+				// texte visible (« Ajouter au panier ») : il ne faut pas les
+				// confondre en restaurant l'état du bouton après coup.
+				var estInput = bouton && 'INPUT' === bouton.tagName;
+				var libelleOrigine = bouton ? ( estInput ? bouton.value : bouton.textContent ) : '';
+				if ( bouton ) {
+					bouton.disabled = true;
+					var enCoursBouton = '<?php echo esc_js( __( 'Adding…', 'buyit-together' ) ); ?>';
+					if ( estInput ) { bouton.value = enCoursBouton; } else { bouton.textContent = enCoursBouton; }
+				}
+
+				ajouter( idAjout, quantite, variation ).then( function ( reponse ) {
+					rafraichirFragments();
+					var n = reponse && reponse.items_count ? reponse.items_count : null;
+					document.getElementById( 'bit-modal-compte' ).textContent = n ? accord( n, texteUn, textePlur ) : '';
+					dialogue.showModal();
+				} ).catch( function () {
+					// Repli : notre appel a échoué, on laisse WooCommerce faire
+					// l'ajout à sa manière plutôt que de bloquer l'achat. Pas de
+					// window.alert() : une boîte native bloquante juste avant un
+					// rechargement de page n'aide personne.
+					avertir( texteErreur );
+					form.submit();
+				} ).finally( function () {
+					if ( bouton ) {
+						bouton.disabled = false;
+						if ( estInput ) { bouton.value = libelleOrigine; } else { bouton.textContent = libelleOrigine; }
+					}
+				} );
+			}, true );
+
+			// --- Ajout direct depuis une suggestion du modal --------------------
+			dialogue.querySelectorAll( '.bit-modal__ajouter' ).forEach( function ( bouton ) {
+				bouton.addEventListener( 'click', function () {
+					bouton.disabled = true;
+					ajouter( bouton.dataset.id, 1, [] ).then( function ( reponse ) {
+						rafraichirFragments();
+						bouton.textContent = '<?php echo esc_js( __( 'Added', 'buyit-together' ) ); ?>';
+						var n = reponse && reponse.items_count ? reponse.items_count : null;
+						if ( n ) { document.getElementById( 'bit-modal-compte' ).textContent = accord( n, texteUn, textePlur ); }
+					} ).catch( function () {
+						bouton.disabled = false;
+						avertir( texteErreur );
+					} );
+				} );
+			} );
+
+			dialogue.querySelector( '.bit-modal__fermer' ).addEventListener( 'click', function () { dialogue.close(); } );
+			dialogue.querySelector( '.bit-modal__continuer' ).addEventListener( 'click', function () { dialogue.close(); } );
+			// Clic sur le fond (::backdrop) : le clic tombe sur <dialog> lui-même,
+			// jamais sur .bit-modal__panneau, puisque le panneau occupe tout
+			// l'espace intérieur — c'est ce qui distingue les deux cas.
+			dialogue.addEventListener( 'click', function ( e ) { if ( e.target === dialogue ) { dialogue.close(); } } );
+		} )();
+		</script>
 		<?php
 	}
 
@@ -376,6 +654,31 @@ final class BuyIt_Together {
 		$ids = apply_filters( 'bit_non_recommandes', $ids );
 
 		return array_values( array_unique( array_filter( (array) $ids ) ) );
+	}
+
+	/**
+	 * L'ajout au panier ouvre-t-il une fenêtre de vente croisée ?
+	 *
+	 * Le modal appelle l'API REST publique du panier de WooCommerce (Store
+	 * API), stable dans le cœur depuis la 8.3 — avant cela, l'extension WooCommerce
+	 * Blocks devait la fournir séparément, sans garantie qu'elle soit active.
+	 * Sans ce plancher de version, un site plus ancien choisirait un mode qui ne
+	 * fonctionne pas, en silence.
+	 */
+	private static function store_api_disponible(): bool {
+		return defined( 'WC_VERSION' ) && version_compare( WC_VERSION, '8.3', '>=' );
+	}
+
+	/**
+	 * Où proposer les suggestions sur la fiche produit : dans le bloc en bas de
+	 * page, dans une fenêtre à l'ajout au panier, ou les deux à la fois.
+	 */
+	private static function mode_fiche(): string {
+		if ( ! self::store_api_disponible() ) {
+			return 'bloc';
+		}
+		$mode = get_option( 'bit_mode_fiche', 'bloc' );
+		return in_array( $mode, [ 'bloc', 'modal', 'both' ], true ) ? $mode : 'bloc';
 	}
 
 	/** Règles enregistrées, nettoyées. */
@@ -715,6 +1018,11 @@ final class BuyIt_Together {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only navigation parameter, no state change.
 		if ( isset( $_GET['regles'] ) ) {
 			$messages[] = __( 'Rules saved.', 'buyit-together' );
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only navigation parameter, no state change.
+		if ( isset( $_GET['mode'] ) ) {
+			$messages[] = __( 'Saved.', 'buyit-together' );
 		}
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only navigation parameter, no state change.
@@ -1216,6 +1524,41 @@ final class BuyIt_Together {
 		</p>
 
 		<p><?php esc_html_e( "Associations calculated from history take priority; the rules below only serve products that do not have any yet. The calculation and its diagnosis are in the Analysis tab.", 'buyit-together' ); ?></p>
+
+		<div class="bit-section">
+		<h2><?php esc_html_e( 'How suggestions are shown', 'buyit-together' ); ?></h2>
+		<?php if ( self::store_api_disponible() ) : ?>
+			<p><?php esc_html_e( "The block sits at the bottom of the page, where the customer may not scroll to. The window opens right after Add to cart, at the moment they are already buying — the two are not mutually exclusive.", 'buyit-together' ); ?></p>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+				<input type="hidden" name="action" value="bit_mode">
+				<?php wp_nonce_field( 'bit_mode' ); ?>
+				<?php $mode_actuel = self::mode_fiche(); ?>
+				<p>
+					<label style="display:block;margin-bottom:.5em">
+						<input type="radio" name="mode_fiche" value="bloc" <?php checked( $mode_actuel, 'bloc' ); ?>>
+						<?php esc_html_e( 'Block at the bottom of the product page only', 'buyit-together' ); ?>
+					</label>
+					<label style="display:block;margin-bottom:.5em">
+						<input type="radio" name="mode_fiche" value="modal" <?php checked( $mode_actuel, 'modal' ); ?>>
+						<?php esc_html_e( 'Window on Add to cart only', 'buyit-together' ); ?>
+					</label>
+					<label style="display:block;margin-bottom:.5em">
+						<input type="radio" name="mode_fiche" value="both" <?php checked( $mode_actuel, 'both' ); ?>>
+						<?php esc_html_e( 'Both', 'buyit-together' ); ?>
+					</label>
+				</p>
+				<p class="description"><?php esc_html_e( "The window calls WooCommerce's own cart API in the browser, so the page never reloads. If the theme's Add to cart button already does something similar, test this on a staging copy of the site before turning it on everywhere.", 'buyit-together' ); ?></p>
+				<?php submit_button( __( 'Save', 'buyit-together' ), 'secondary' ); ?>
+			</form>
+		<?php else : ?>
+			<p class="description">
+				<?php
+				/* translators: %s: installed WooCommerce version number */
+				printf( esc_html__( 'The Add to cart window needs WooCommerce 8.3 or later (this site runs %s). The block below stays available regardless.', 'buyit-together' ), esc_html( defined( 'WC_VERSION' ) ? WC_VERSION : '?' ) );
+				?>
+			</p>
+		<?php endif; ?>
+		</div>
 
 		<div class="bit-section">
 		<h2><?php esc_html_e( 'Rules by family of parts', 'buyit-together' ); ?></h2>
@@ -1953,6 +2296,26 @@ final class BuyIt_Together {
 		delete_transient( 'bit_analyse' ); // les recommandations en dépendent
 
 		wp_safe_redirect( admin_url( 'admin.php?page=buyit-together&onglet=analyse&muets=1' ) );
+		exit;
+	}
+
+	/** Enregistre le mode d'affichage choisi pour la fiche produit. */
+	public static function enregistrer_mode(): void {
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_die( esc_html__( 'Permission denied.', 'buyit-together' ) );
+		}
+		check_admin_referer( 'bit_mode' );
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- nonce checked above via check_admin_referer(); sanitized on the next line.
+		$mode = isset( $_POST['mode_fiche'] ) ? sanitize_key( wp_unslash( $_POST['mode_fiche'] ) ) : 'bloc';
+		if ( ! in_array( $mode, [ 'bloc', 'modal', 'both' ], true ) || ! self::store_api_disponible() ) {
+			$mode = 'bloc';
+		}
+
+		// Autochargée : lue à chaque fiche produit, via mode_fiche().
+		update_option( 'bit_mode_fiche', $mode, true );
+
+		wp_safe_redirect( admin_url( 'admin.php?page=buyit-together&onglet=fiche&mode=1' ) );
 		exit;
 	}
 
