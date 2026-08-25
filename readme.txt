@@ -4,7 +4,7 @@ Tags: woocommerce, cross-sells, related products, upsell, recommendations
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 1.3.0
+Stable tag: 1.3.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -96,6 +96,12 @@ Yes. It reads orders from the HPOS tables directly.
 3. The suggestion block as customers see it.
 
 == Changelog ==
+
+= 1.3.1 =
+* Fixed: in the Columns layout, a real (longer) product name wrapped to three or four lines, throwing off the Add buttons' alignment from one card to the next. Names are now capped to two lines and cards keep the same height.
+* The window no longer scrolls internally in normal use; only a whole-window scroll remains as a safety net for an unusually long list of suggestions.
+* Smaller Add / View product buttons, matched in width regardless of their label length.
+* "View cart" and "Continue shopping" are now centred.
 
 = 1.3.0 =
 * The Add to cart window has been redesigned: rounded panel, soft shadow, a checkmark badge, an entrance animation, and a proper two-layout choice (row or a small grid of cards).

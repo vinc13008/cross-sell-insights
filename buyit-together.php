@@ -3,7 +3,7 @@
  * Plugin Name:       BuyIt Together
  * Plugin URI:        https://github.com/vinc13008/buyit-together
  * Description:       Shows on each product page the parts customers actually bought with it, deduced from your order history. No per-product setup: associations are recalculated weekly.
- * Version:           1.3.0
+ * Version:           1.3.1
  * Requires at least: 6.0
  * Requires PHP:      8.0
  * Author:            POWERLOOP
@@ -345,7 +345,9 @@ final class BuyIt_Together {
 	private static function css_modal(): string {
 		ob_start();
 		?>
-			.bit-modal { border: 0; padding: 0; max-width: 480px; width: calc(100% - 2em);
+			.bit-modal { border: 0; padding: 0; max-width: 520px; width: calc(100% - 2em);
+				max-height: 88vh; overflow-y: auto; /* filet de sécurité seulement : avec une liste
+				normale, tout doit tenir sans faire défiler quoi que ce soit. */
 				border-radius: var(--bit-rayon, 14px); background: var(--bit-fond, #fff); color: var(--bit-texte, #1d2327);
 				box-shadow: 0 24px 60px -16px rgba(0,0,0,.35), 0 4px 18px rgba(0,0,0,.14);
 				opacity: 1; transform: none;
@@ -365,20 +367,30 @@ final class BuyIt_Together {
 				font-size: .72em; flex: 0 0 auto; }
 			.bit-modal__compte { flex-basis: 100%; font-weight: 400; opacity: .65; font-size: .92em; }
 			.bit-modal__titre { font-size: 1.02em; margin: 0 0 .9em; }
-			.bit-modal__liste { list-style: none; margin: 0 0 1.3em; padding: 0;
-				display: grid; gap: 1em; max-height: 46vh; overflow-y: auto; }
+			.bit-modal__liste { list-style: none; margin: 0 0 1.3em; padding: 0; display: grid; gap: 1em; }
 			.bit-modal__liste--ligne { grid-template-columns: 1fr; }
-			.bit-modal__liste--colonnes { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+			/* 150px minimum plutôt que 120 : à 120, un nom de produit réel (plus
+			   long que « Widget ») s'enroule sur 3-4 lignes inégales d'une carte à
+			   l'autre — la grille se rabat d'elle-même sur moins de colonnes. */
+			.bit-modal__liste--colonnes { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
 			.bit-modal__liste--ligne .bit-modal__item { display: flex; align-items: center; gap: .9em; }
 			.bit-modal__liste--ligne .bit-modal__item a:first-child { display: flex; align-items: center;
 				gap: .9em; flex: 1 1 auto; min-width: 0; text-decoration: none; color: inherit; }
 			.bit-modal__liste--ligne .bit-modal__item img { width: 56px; height: 56px; }
+			/* Colonne = carte : hauteur égale entre cartes d'une même rangée grâce à
+			   l'étirement par défaut de la grille, et le nom est plafonné à deux
+			   lignes pour que les rangées suivantes ne soient jamais déformées par
+			   une seule carte au nom trop long. Le bouton reste collé en bas
+			   (margin-top:auto) même quand le nom fait une ligne au lieu de deux. */
 			.bit-modal__liste--colonnes .bit-modal__item { display: flex; flex-direction: column;
-				text-align: center; gap: .6em; }
+				text-align: center; gap: .5em; }
 			.bit-modal__liste--colonnes .bit-modal__item a:first-child { display: flex; flex-direction: column;
-				align-items: center; gap: .6em; text-decoration: none; color: inherit; }
+				align-items: center; gap: .5em; flex: 1 1 auto; text-decoration: none; color: inherit; }
 			.bit-modal__liste--colonnes .bit-modal__item img { width: 100%; aspect-ratio: 1; }
-			.bit-modal__liste--colonnes .bit-modal__ajouter, .bit-modal__liste--colonnes .bit-modal__voir { width: 100%; }
+			.bit-modal__liste--colonnes .bit-modal__nom { display: -webkit-box; -webkit-line-clamp: 2;
+				-webkit-box-orient: vertical; overflow: hidden; min-height: calc(.92em * 1.35 * 2); }
+			.bit-modal__liste--colonnes .bit-modal__ajouter, .bit-modal__liste--colonnes .bit-modal__voir {
+				width: 100%; margin-top: auto; }
 			.bit-modal__item img { object-fit: cover; flex: 0 0 auto;
 				border-radius: max(4px, calc(var(--bit-rayon, 14px) * .5)); }
 			.bit-modal__nom { font-size: .92em; line-height: 1.35; }
@@ -386,13 +398,14 @@ final class BuyIt_Together {
 				margin-top: .2em; }
 			.bit-modal__ajouter, .bit-modal__voir, .bit-modal__pied .button {
 				flex: 0 0 auto; white-space: nowrap; border: 0; cursor: pointer; text-decoration: none;
-				display: inline-block; background: var(--bit-accent, #1d2327); color: #fff; font-weight: 600;
-				font-size: .85em; padding: .6em 1.15em; border-radius: max(4px, calc(var(--bit-rayon, 14px) * .6));
+				display: inline-block; text-align: center; min-width: 84px;
+				background: var(--bit-accent, #1d2327); color: #fff; font-weight: 600;
+				font-size: .78em; padding: .42em .85em; border-radius: max(4px, calc(var(--bit-rayon, 14px) * .6));
 				transition: transform 140ms ease-out, opacity 140ms ease; }
 			.bit-modal__ajouter:hover, .bit-modal__voir:hover, .bit-modal__pied .button:hover { opacity: .88; }
 			.bit-modal__ajouter:active, .bit-modal__voir:active, .bit-modal__pied .button:active { transform: scale(.96); }
 			.bit-modal__ajouter[disabled] { opacity: .55; cursor: default; transform: none; }
-			.bit-modal__pied { display: flex; gap: 1em; align-items: center; flex-wrap: wrap;
+			.bit-modal__pied { display: flex; gap: 1em; align-items: center; justify-content: center; flex-wrap: wrap;
 				padding-top: 1.2em; border-top: 1px solid color-mix(in srgb, var(--bit-texte, #1d2327) 12%, transparent); }
 			.bit-modal__continuer { background: none; border: 0; text-decoration: underline; cursor: pointer;
 				color: inherit; font-size: .9em; padding: 0; opacity: .75; }
