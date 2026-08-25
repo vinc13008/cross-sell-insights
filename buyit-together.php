@@ -3,7 +3,7 @@
  * Plugin Name:       BuyIt Together
  * Plugin URI:        https://github.com/vinc13008/buyit-together
  * Description:       Shows on each product page the parts customers actually bought with it, deduced from your order history. No per-product setup: associations are recalculated weekly.
- * Version:           1.3.2
+ * Version:           1.3.3
  * Requires at least: 6.0
  * Requires PHP:      8.0
  * Author:            POWERLOOP
@@ -376,7 +376,14 @@ final class BuyIt_Together {
 			   derrière une barre de défilement. */
 			.bit-modal__liste { list-style: none; margin: 0 0 1.1em; padding: 0; display: grid; gap: .7em; }
 			.bit-modal__liste--ligne { grid-template-columns: 1fr; }
-			.bit-modal__liste--colonnes { grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); }
+			/* Largeur de colonne fixe, pas étirée en 1fr : avec moins de suggestions
+			   qu'il n'y a de place, une colonne en 1fr comble l'espace restant en
+			   s'élargissant, ce qui pousse les cartes à gauche plutôt que de les
+			   centrer. Une largeur fixe + auto-fit (qui élimine les pistes vides) et
+			   justify-content:center centrent la rangée quel que soit son nombre
+			   de cartes. */
+			.bit-modal__liste--colonnes { grid-template-columns: repeat(auto-fit, 140px);
+				justify-content: center; }
 			.bit-modal__liste--ligne .bit-modal__item { display: flex; align-items: center; gap: .8em; }
 			.bit-modal__liste--ligne .bit-modal__item a:first-child { display: flex; align-items: center;
 				gap: .8em; flex: 1 1 auto; min-width: 0; text-decoration: none; color: inherit; }

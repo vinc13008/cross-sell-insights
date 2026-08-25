@@ -4,7 +4,7 @@ Tags: woocommerce, cross-sells, related products, upsell, recommendations
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 1.3.2
+Stable tag: 1.3.3
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -96,6 +96,9 @@ Yes. It reads orders from the HPOS tables directly.
 3. The suggestion block as customers see it.
 
 == Changelog ==
+
+= 1.3.3 =
+* Fixed: in the Columns layout, fewer suggestions than fit a full row stayed pinned to the left instead of being centred.
 
 = 1.3.2 =
 * Fixed: a real (non-square) product photo — two parts side by side, a close-up, a long thin item — inflated its card far beyond what its content needed, which is what made the window tall enough to need scrolling in the first place. Thumbnails are now a fixed compact size, not sized from the image itself.
