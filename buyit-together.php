@@ -411,17 +411,26 @@ final class BuyIt_Together {
 			.bit-modal__nom { font-size: .8em; line-height: 1.3; }
 			.bit-modal__prix { display: block; font-size: .8em; font-weight: 700; color: var(--bit-accent, #1d2327);
 				margin-top: .15em; }
+			/* Ces trois-là doivent avoir exactement la même taille, alors qu'ils
+			   ne sont pas du même type : « Ajouter » est un <button>, « Voir le
+			   produit » et « Voir le panier » sont des <a>. Un thème hôte habille
+			   presque toujours ses boutons (casse, interligne, hauteur minimale,
+			   rembourrage) sans toucher aux liens ordinaires — d'où deux tailles
+			   différentes si on le laisse faire. On fige donc ici TOUT ce qui
+			   détermine la boîte rendue, et rien d'autre : la couleur et le rayon
+			   restent réglables, la taille non. Sans quoi la fenêtre change
+			   d'allure d'un thème à l'autre. */
 			.bit-modal__ajouter, .bit-modal__voir, .bit-modal__pied .button {
-				/* Largeur figée plutôt qu'un étirement à 100% : sur certains thèmes,
-				   un lien (« Voir le produit ») ne s'étire pas comme un <button>
-				   (« Ajouter ») même à spécificité égale. Une valeur fixe, identique
-				   et forcée sur les deux évite d'avoir à deviner lequel des deux le
-				   thème respecte. */
 				box-sizing: border-box !important; flex: 0 0 auto; white-space: nowrap; border: 0; cursor: pointer;
-				text-decoration: none; display: inline-block !important; text-align: center;
-				width: 118px !important; min-width: 118px;
-				background: var(--bit-accent, #1d2327); color: #fff; font-weight: 600;
-				font-size: .74em !important; padding: .5em .7em !important; border-radius: max(4px, calc(var(--bit-rayon, 14px) * .55));
+				text-decoration: none; text-align: center;
+				display: inline-flex !important; align-items: center !important; justify-content: center !important;
+				width: 118px !important; min-width: 118px !important; max-width: 118px !important;
+				font-size: .74em !important; line-height: 1.15 !important;
+				padding: .55em .7em !important; min-height: 0 !important; height: auto !important;
+				text-transform: none !important; letter-spacing: normal !important;
+				font-weight: 600 !important; font-family: inherit !important;
+				background: var(--bit-accent, #1d2327); color: #fff;
+				border-radius: max(4px, calc(var(--bit-rayon, 14px) * .55));
 				transition: transform 140ms ease-out, opacity 140ms ease; }
 			.bit-modal__ajouter:hover, .bit-modal__voir:hover, .bit-modal__pied .button:hover { opacity: .88; }
 			.bit-modal__ajouter:active, .bit-modal__voir:active, .bit-modal__pied .button:active { transform: scale(.96); }
