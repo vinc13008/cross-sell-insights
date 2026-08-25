@@ -3,7 +3,7 @@
  * Plugin Name:       BuyIt Together
  * Plugin URI:        https://github.com/vinc13008/buyit-together
  * Description:       Shows on each product page the parts customers actually bought with it, deduced from your order history. No per-product setup: associations are recalculated weekly.
- * Version:           1.2.0
+ * Version:           1.3.0
  * Requires at least: 6.0
  * Requires PHP:      8.0
  * Author:            POWERLOOP
@@ -59,6 +59,7 @@ final class BuyIt_Together {
 		add_action( 'admin_post_bit_recos', [ self::class, 'appliquer_recos' ] );
 		add_action( 'admin_post_bit_editeur', [ self::class, 'enregistrer_editeur' ] );
 		add_action( 'admin_post_bit_mode', [ self::class, 'enregistrer_mode' ] );
+		add_action( 'admin_post_bit_style_modal', [ self::class, 'enregistrer_style_modal' ] );
 		add_filter( 'bit_compagnons', [ self::class, 'repli_regles' ], 10, 2 );
 
 		if ( ! wp_next_scheduled( self::CRON ) ) {
@@ -333,27 +334,114 @@ final class BuyIt_Together {
 	 * et stopImmediatePropagation() l'empêche de s'exécuter à son tour — sans
 	 * cela, le produit s'ajouterait deux fois.
 	 */
+	/**
+	 * CSS de la fenêtre, partagée entre le vrai modal côté client et
+	 * l'aperçu de l'écran de réglages — sans quoi les deux auraient fini par
+	 * diverger, et l'aperçu aurait menti sur le rendu réel.
+	 *
+	 * Les couleurs et le rayon sont lus en variables CSS, posées par l'appelant
+	 * sur l'élément qui porte cette feuille ; jamais codés en dur ici.
+	 */
+	private static function css_modal(): string {
+		ob_start();
+		?>
+			.bit-modal { border: 0; padding: 0; max-width: 480px; width: calc(100% - 2em);
+				border-radius: var(--bit-rayon, 14px); background: var(--bit-fond, #fff); color: var(--bit-texte, #1d2327);
+				box-shadow: 0 24px 60px -16px rgba(0,0,0,.35), 0 4px 18px rgba(0,0,0,.14);
+				opacity: 1; transform: none;
+				transition: opacity 180ms ease-out, transform 180ms cubic-bezier(.23,1,.32,1); }
+			@starting-style { .bit-modal[open] { opacity: 0; transform: scale(.96) translateY(8px); } }
+			.bit-modal::backdrop { background: rgba(12,12,16,.55); backdrop-filter: blur(2px); }
+			.bit-modal__panneau { position: relative; padding: 1.8em 1.8em 1.6em; }
+			.bit-modal__fermer { position: absolute; top: .7em; right: .7em; width: 2.2em; height: 2.2em;
+				display: flex; align-items: center; justify-content: center; border: 0; border-radius: 50%;
+				background: transparent; font-size: 1.3em; line-height: 1; cursor: pointer; color: inherit;
+				opacity: .55; transition: background-color 140ms ease, opacity 140ms ease; }
+			.bit-modal__fermer:hover { opacity: 1; background: color-mix(in srgb, var(--bit-texte, #1d2327) 8%, transparent); }
+			.bit-modal__ajoute { display: flex; align-items: center; flex-wrap: wrap; gap: .55em;
+				margin: 0 0 1.2em; padding-right: 2.2em; font-weight: 600; }
+			.bit-modal__coche { display: inline-flex; align-items: center; justify-content: center;
+				width: 1.5em; height: 1.5em; border-radius: 50%; background: var(--bit-accent, #1d2327); color: #fff;
+				font-size: .72em; flex: 0 0 auto; }
+			.bit-modal__compte { flex-basis: 100%; font-weight: 400; opacity: .65; font-size: .92em; }
+			.bit-modal__titre { font-size: 1.02em; margin: 0 0 .9em; }
+			.bit-modal__liste { list-style: none; margin: 0 0 1.3em; padding: 0;
+				display: grid; gap: 1em; max-height: 46vh; overflow-y: auto; }
+			.bit-modal__liste--ligne { grid-template-columns: 1fr; }
+			.bit-modal__liste--colonnes { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+			.bit-modal__liste--ligne .bit-modal__item { display: flex; align-items: center; gap: .9em; }
+			.bit-modal__liste--ligne .bit-modal__item a:first-child { display: flex; align-items: center;
+				gap: .9em; flex: 1 1 auto; min-width: 0; text-decoration: none; color: inherit; }
+			.bit-modal__liste--ligne .bit-modal__item img { width: 56px; height: 56px; }
+			.bit-modal__liste--colonnes .bit-modal__item { display: flex; flex-direction: column;
+				text-align: center; gap: .6em; }
+			.bit-modal__liste--colonnes .bit-modal__item a:first-child { display: flex; flex-direction: column;
+				align-items: center; gap: .6em; text-decoration: none; color: inherit; }
+			.bit-modal__liste--colonnes .bit-modal__item img { width: 100%; aspect-ratio: 1; }
+			.bit-modal__liste--colonnes .bit-modal__ajouter, .bit-modal__liste--colonnes .bit-modal__voir { width: 100%; }
+			.bit-modal__item img { object-fit: cover; flex: 0 0 auto;
+				border-radius: max(4px, calc(var(--bit-rayon, 14px) * .5)); }
+			.bit-modal__nom { font-size: .92em; line-height: 1.35; }
+			.bit-modal__prix { display: block; font-size: .86em; font-weight: 700; color: var(--bit-accent, #1d2327);
+				margin-top: .2em; }
+			.bit-modal__ajouter, .bit-modal__voir, .bit-modal__pied .button {
+				flex: 0 0 auto; white-space: nowrap; border: 0; cursor: pointer; text-decoration: none;
+				display: inline-block; background: var(--bit-accent, #1d2327); color: #fff; font-weight: 600;
+				font-size: .85em; padding: .6em 1.15em; border-radius: max(4px, calc(var(--bit-rayon, 14px) * .6));
+				transition: transform 140ms ease-out, opacity 140ms ease; }
+			.bit-modal__ajouter:hover, .bit-modal__voir:hover, .bit-modal__pied .button:hover { opacity: .88; }
+			.bit-modal__ajouter:active, .bit-modal__voir:active, .bit-modal__pied .button:active { transform: scale(.96); }
+			.bit-modal__ajouter[disabled] { opacity: .55; cursor: default; transform: none; }
+			.bit-modal__pied { display: flex; gap: 1em; align-items: center; flex-wrap: wrap;
+				padding-top: 1.2em; border-top: 1px solid color-mix(in srgb, var(--bit-texte, #1d2327) 12%, transparent); }
+			.bit-modal__continuer { background: none; border: 0; text-decoration: underline; cursor: pointer;
+				color: inherit; font-size: .9em; padding: 0; opacity: .75; }
+			.bit-modal__continuer:hover { opacity: 1; }
+			@media (prefers-reduced-motion: reduce) { .bit-modal { transition: none; } }
+			.bit-avertir { position: fixed; bottom: 1.2em; right: 1.2em; left: auto; max-width: 320px;
+				background: #d63638; color: #fff; padding: .8em 1.1em; border-radius: 6px;
+				font-size: .9em; box-shadow: 0 4px 14px rgba(0,0,0,.2); z-index: 100000; }
+		<?php
+		return ob_get_clean();
+	}
+
 	private static function afficher_modal( WC_Product $produit, array $produits ): void {
 		static $deja_affiche = false;
 		if ( $deja_affiche ) {
 			return; // un seul modal par page, même si le hook était appelé deux fois
 		}
 		$deja_affiche = true;
+
+		$style = self::modal_style();
+
+		// Couleurs choisies à la main : posées une fois pour toutes. Sinon, la
+		// fenêtre part sans elles et un script les déduit des couleurs déjà
+		// appliquées par le thème sur cette page — le bouton d'ajout réel dit
+		// mieux que n'importe quel réglage à quoi ressemble « la couleur du site ».
+		$vars = sprintf( '--bit-rayon:%dpx;', $style['rayon'] );
+		if ( $style['couleurs_personnalisees'] ) {
+			$vars .= sprintf(
+				'--bit-accent:%s;--bit-fond:%s;--bit-texte:%s;',
+				esc_attr( $style['couleur_accent'] ), esc_attr( $style['couleur_fond'] ), esc_attr( $style['couleur_texte'] )
+			);
+		}
 		?>
-		<dialog id="bit-modal" class="bit-modal"
+		<dialog id="bit-modal" class="bit-modal" style="<?php echo esc_attr( $vars ); ?>"
 		        data-produit="<?php echo (int) $produit->get_id(); ?>"
 		        data-rest="<?php echo esc_url( rest_url( 'wc/store/v1/' ) ); ?>"
-		        data-panier="<?php echo esc_url( wc_get_cart_url() ); ?>">
+		        data-panier="<?php echo esc_url( wc_get_cart_url() ); ?>"
+		        <?php echo $style['couleurs_personnalisees'] ? '' : 'data-couleurs-auto="1"'; ?>>
 			<div class="bit-modal__panneau">
 				<button type="button" class="bit-modal__fermer" aria-label="<?php esc_attr_e( 'Close', 'buyit-together' ); ?>">&times;</button>
 				<p class="bit-modal__ajoute">
-					<?php esc_html_e( 'Added to your cart.', 'buyit-together' ); ?>
-					<span id="bit-modal-compte"></span>
+					<span class="bit-modal__coche" aria-hidden="true">&#10003;</span>
+					<?php echo esc_html( $style['message_ajoute'] ); ?>
+					<span id="bit-modal-compte" class="bit-modal__compte"></span>
 				</p>
 				<h3 class="bit-modal__titre">
-					<?php echo esc_html( apply_filters( 'bit_titre', __( 'Frequently bought with this part', 'buyit-together' ) ) ); ?>
+					<?php echo esc_html( apply_filters( 'bit_titre', $style['titre'] ) ); ?>
 				</h3>
-				<ul class="bit-modal__liste">
+				<ul class="bit-modal__liste bit-modal__liste--<?php echo esc_attr( $style['disposition'] ); ?>">
 					<?php foreach ( $produits as $p ) :
 						// Une variation exige de choisir ses options avant de s'ajouter ;
 						// pas de raccourci fiable ici, on renvoie vers sa fiche à la place.
@@ -366,11 +454,11 @@ final class BuyIt_Together {
 								<span class="bit-modal__prix"><?php echo wp_kses_post( $p->get_price_html() ); ?></span>
 							</a>
 							<?php if ( $ajoutable ) : ?>
-								<button type="button" class="button bit-modal__ajouter" data-id="<?php echo (int) $p->get_id(); ?>">
+								<button type="button" class="bit-modal__ajouter" data-id="<?php echo (int) $p->get_id(); ?>">
 									<?php esc_html_e( 'Add', 'buyit-together' ); ?>
 								</button>
 							<?php else : ?>
-								<a class="button bit-modal__voir" href="<?php echo esc_url( $p->get_permalink() ); ?>">
+								<a class="bit-modal__voir" href="<?php echo esc_url( $p->get_permalink() ); ?>">
 									<?php esc_html_e( 'View product', 'buyit-together' ); ?>
 								</a>
 							<?php endif; ?>
@@ -383,38 +471,39 @@ final class BuyIt_Together {
 				</div>
 			</div>
 		</dialog>
-		<style>
-			.bit-modal { border: 0; border-radius: 8px; padding: 0; max-width: 480px; width: calc(100% - 2em); }
-			.bit-modal::backdrop { background: rgba(0,0,0,.5); }
-			.bit-modal__panneau { position: relative; padding: 1.6em; }
-			.bit-modal__fermer { position: absolute; top: .6em; right: .6em; width: 2em; height: 2em;
-				border: 0; background: transparent; font-size: 1.4em; line-height: 1; cursor: pointer; color: #666; }
-			.bit-modal__ajoute { margin: 0 0 1em; padding-right: 2em; font-weight: 600; }
-			.bit-modal__titre { font-size: 1em; margin: 0 0 .8em; }
-			.bit-modal__liste { list-style: none; margin: 0 0 1.2em; padding: 0;
-				display: grid; gap: .9em; max-height: 45vh; overflow-y: auto; }
-			.bit-modal__item { display: flex; align-items: center; gap: .8em; }
-			.bit-modal__item a:first-child { display: flex; align-items: center; gap: .8em; flex: 1 1 auto;
-				min-width: 0; text-decoration: none; color: inherit; }
-			.bit-modal__item img { width: 48px; height: 48px; object-fit: cover; border-radius: 4px; flex: 0 0 auto; }
-			.bit-modal__nom { font-size: .92em; line-height: 1.3; }
-			.bit-modal__prix { display: block; font-size: .85em; font-weight: 600; opacity: .8; }
-			.bit-modal__ajouter, .bit-modal__voir { flex: 0 0 auto; white-space: nowrap; }
-			.bit-modal__ajouter[disabled] { opacity: .6; cursor: default; }
-			.bit-modal__pied { display: flex; gap: .8em; align-items: center; }
-			.bit-modal__continuer { background: none; border: 0; text-decoration: underline; cursor: pointer;
-				color: inherit; font-size: .92em; padding: 0; }
-			@media (prefers-reduced-motion: reduce) { .bit-modal { animation: none; } }
-			.bit-avertir { position: fixed; bottom: 1.2em; right: 1.2em; left: auto; max-width: 320px;
-				background: #d63638; color: #fff; padding: .8em 1.1em; border-radius: 6px;
-				font-size: .9em; box-shadow: 0 4px 14px rgba(0,0,0,.2); z-index: 100000; }
-		</style>
+		<style><?php echo self::css_modal(); // phpcs:ignore WordPress.Security.EscapeOutput -- static CSS text, no user input ?></style>
 		<script>
 		( function () {
 			var dialogue = document.getElementById( 'bit-modal' );
 			// Pas de <dialog> côté navigateur (très ancien, ou désactivé) : on ne
 			// touche à rien plutôt que de casser l'ajout au panier normal.
 			if ( ! dialogue || typeof dialogue.showModal !== 'function' ) { return; }
+
+			// Aucune couleur choisie à la main : on les déduit de ce que le thème
+			// applique déjà sur cette page, plutôt que d'imposer un choix arbitraire.
+			// Le vrai bouton d'ajout au panier dit mieux que n'importe quel réglage
+			// à quoi ressemble la couleur de la boutique.
+			if ( dialogue.dataset.couleursAuto ) {
+				(function () {
+					function estTransparente( couleur ) {
+						return ! couleur || 'transparent' === couleur || /rgba?\(\s*0\s*,\s*0\s*,\s*0\s*,\s*0\s*\)/.test( couleur );
+					}
+					var boutonReel = document.querySelector( 'form.cart button[type="submit"], form.cart input[type="submit"]' );
+					if ( boutonReel ) {
+						var styleBouton = getComputedStyle( boutonReel );
+						if ( ! estTransparente( styleBouton.backgroundColor ) ) {
+							dialogue.style.setProperty( '--bit-accent', styleBouton.backgroundColor );
+						}
+					}
+					var styleCorps = getComputedStyle( document.body );
+					if ( ! estTransparente( styleCorps.backgroundColor ) ) {
+						dialogue.style.setProperty( '--bit-fond', styleCorps.backgroundColor );
+					}
+					if ( styleCorps.color ) {
+						dialogue.style.setProperty( '--bit-texte', styleCorps.color );
+					}
+				})();
+			}
 
 			var base       = dialogue.dataset.rest;
 			var idProduit  = dialogue.dataset.produit;
@@ -681,6 +770,48 @@ final class BuyIt_Together {
 		return in_array( $mode, [ 'bloc', 'modal', 'both' ], true ) ? $mode : 'bloc';
 	}
 
+	/**
+	 * Apparence de la fenêtre d'ajout au panier, nettoyée avec repli sur des
+	 * valeurs par défaut sûres — un champ vidé ou une couleur invalide ne doit
+	 * jamais produire une fenêtre cassée ou illisible.
+	 *
+	 * @return array{titre:string,message_ajoute:string,couleur_accent:string,couleur_fond:string,couleur_texte:string,rayon:int,disposition:string}
+	 */
+	private static function modal_style(): array {
+		$defaut = [
+			'titre'                 => __( 'Frequently bought with this part', 'buyit-together' ),
+			'message_ajoute'        => __( 'Added to your cart.', 'buyit-together' ),
+			// Sans effet tant que couleurs_personnalisees est faux : ce sont les
+			// couleurs de repli si jamais la détection automatique échouait.
+			'couleur_accent'        => '#1d2327',
+			'couleur_fond'          => '#ffffff',
+			'couleur_texte'         => '#1d2327',
+			'rayon'                 => 14,
+			'disposition'           => 'ligne',
+			// Faux par défaut : tant que personne n'a rien enregistré ici, la
+			// fenêtre reprend les couleurs du thème plutôt qu'un choix arbitraire.
+			'couleurs_personnalisees' => false,
+		];
+
+		$brut  = get_option( 'bit_modal_style', [] );
+		$brut  = is_array( $brut ) ? $brut : [];
+		$style = array_merge( $defaut, $brut );
+
+		$titre          = sanitize_text_field( (string) $style['titre'] );
+		$message_ajoute = sanitize_text_field( (string) $style['message_ajoute'] );
+
+		return [
+			'titre'                   => '' !== $titre ? $titre : $defaut['titre'],
+			'message_ajoute'          => '' !== $message_ajoute ? $message_ajoute : $defaut['message_ajoute'],
+			'couleur_accent'          => sanitize_hex_color( (string) $style['couleur_accent'] ) ?: $defaut['couleur_accent'],
+			'couleur_fond'            => sanitize_hex_color( (string) $style['couleur_fond'] ) ?: $defaut['couleur_fond'],
+			'couleur_texte'           => sanitize_hex_color( (string) $style['couleur_texte'] ) ?: $defaut['couleur_texte'],
+			'rayon'                   => max( 0, min( 32, (int) $style['rayon'] ) ),
+			'disposition'             => in_array( $style['disposition'], [ 'ligne', 'colonnes' ], true ) ? $style['disposition'] : 'ligne',
+			'couleurs_personnalisees' => (bool) $style['couleurs_personnalisees'],
+		];
+	}
+
 	/** Règles enregistrées, nettoyées. */
 	private static function regles(): array {
 		$brut = get_option( 'bit_regles', [] );
@@ -886,7 +1017,7 @@ final class BuyIt_Together {
 	public static function page(): void {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only navigation parameter, no state change.
 		$onglet = isset( $_GET['onglet'] ) ? sanitize_key( $_GET['onglet'] ) : 'fiche';
-		if ( ! in_array( $onglet, [ 'analyse', 'fiche', 'panier', 'gamme', 'editeur' ], true ) ) {
+		if ( ! in_array( $onglet, [ 'analyse', 'fiche', 'panier', 'gamme', 'editeur', 'reglages' ], true ) ) {
 			$onglet = 'analyse';
 		}
 		$base   = admin_url( 'admin.php?page=buyit-together' );
@@ -929,15 +1060,20 @@ final class BuyIt_Together {
 				   class="nav-tab <?php echo 'editeur' === $onglet ? 'nav-tab-active' : ''; ?>">
 					<?php esc_html_e( 'Category editor', 'buyit-together' ); ?>
 				</a>
+				<a href="<?php echo esc_url( $base . '&onglet=reglages' ); ?>"
+				   class="nav-tab <?php echo 'reglages' === $onglet ? 'nav-tab-active' : ''; ?>">
+					<?php esc_html_e( 'Settings', 'buyit-together' ); ?>
+				</a>
 			</nav>
 
 			<?php
 			match ( $onglet ) {
-				'fiche'   => self::onglet_fiche(),
-				'panier'  => self::onglet_panier(),
-				'gamme'   => self::onglet_editeur( 'gamme' ),
-				'editeur' => self::onglet_editeur( 'liens' ),
-				default   => self::onglet_analyse(),
+				'fiche'    => self::onglet_fiche(),
+				'panier'   => self::onglet_panier(),
+				'gamme'    => self::onglet_editeur( 'gamme' ),
+				'editeur'  => self::onglet_editeur( 'liens' ),
+				'reglages' => self::onglet_reglages(),
+				default    => self::onglet_analyse(),
 			};
 			?>
 		</div>
@@ -1023,6 +1159,11 @@ final class BuyIt_Together {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only navigation parameter, no state change.
 		if ( isset( $_GET['mode'] ) ) {
 			$messages[] = __( 'Saved.', 'buyit-together' );
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only navigation parameter, no state change.
+		if ( isset( $_GET['style'] ) ) {
+			$messages[] = __( 'Window appearance saved.', 'buyit-together' );
 		}
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only navigation parameter, no state change.
@@ -1511,19 +1652,16 @@ final class BuyIt_Together {
 	}
 
 	/**
-	 * Onglet « fiche produit » : le bloc affiché sous le résumé du produit,
-	 * alimenté par les associations calculées puis, à défaut, par les règles.
+	 * Onglet « réglages » : où et comment les suggestions s'affichent côté
+	 * client — bloc, fenêtre, ou les deux — et l'apparence de la fenêtre.
+	 * Rien ici n'agit sur le contenu des suggestions elles-mêmes, seulement
+	 * sur leur présentation ; le contenu se règle dans les autres onglets.
 	 */
-	private static function onglet_fiche(): void {
-		$regles   = self::regles();
-		$regles[] = [ 'termes' => [], 'produits' => [] ]; // une ligne vierge en fin de tableau
-		$termes_dispo = self::termes_disponibles();
+	private static function onglet_reglages(): void {
 		?>
 		<p class="bit-intro">
-			<?php esc_html_e( "What the customer sees on the product page, before adding to the cart. These suggestions belong to the plugin and do not affect WooCommerce cross-sells.", 'buyit-together' ); ?>
+			<?php esc_html_e( "How and where suggestions appear to the customer. Their content is configured in the other tabs; only presentation lives here.", 'buyit-together' ); ?>
 		</p>
-
-		<p><?php esc_html_e( "Associations calculated from history take priority; the rules below only serve products that do not have any yet. The calculation and its diagnosis are in the Analysis tab.", 'buyit-together' ); ?></p>
 
 		<div class="bit-section">
 		<h2><?php esc_html_e( 'How suggestions are shown', 'buyit-together' ); ?></h2>
@@ -1559,6 +1697,179 @@ final class BuyIt_Together {
 			</p>
 		<?php endif; ?>
 		</div>
+
+		<?php if ( self::store_api_disponible() ) : ?>
+		<div class="bit-section">
+		<h2><?php esc_html_e( 'Window appearance', 'buyit-together' ); ?></h2>
+		<p><?php esc_html_e( "Applies whenever the window is enabled above, whether or not the block is also shown.", 'buyit-together' ); ?></p>
+		<?php $style = self::modal_style(); ?>
+		<div class="bit-apercu-mise-en-page">
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" id="bit-form-style">
+				<input type="hidden" name="action" value="bit_style_modal">
+				<?php wp_nonce_field( 'bit_style_modal' ); ?>
+				<table class="form-table" role="presentation">
+					<tr>
+						<th scope="row"><label for="bit-titre"><?php esc_html_e( 'Suggestions title', 'buyit-together' ); ?></label></th>
+						<td><input type="text" id="bit-titre" name="titre" class="regular-text"
+						           value="<?php echo esc_attr( $style['titre'] ); ?>"
+						           data-apercu="bit-previsu-titre"></td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="bit-message"><?php esc_html_e( '"Added to cart" message', 'buyit-together' ); ?></label></th>
+						<td><input type="text" id="bit-message" name="message_ajoute" class="regular-text"
+						           value="<?php echo esc_attr( $style['message_ajoute'] ); ?>"
+						           data-apercu="bit-previsu-message"></td>
+					</tr>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Colours', 'buyit-together' ); ?></th>
+						<td>
+							<label style="display:block;margin-bottom:.7em">
+								<input type="checkbox" name="couleur_auto" id="bit-couleur-auto" value="1" <?php checked( ! $style['couleurs_personnalisees'] ); ?>>
+								<?php esc_html_e( "Automatically match my theme's colours", 'buyit-together' ); ?>
+							</label>
+							<p class="description" style="margin:0 0 .8em"><?php esc_html_e( "Reads the colour of the real Add to cart button and the page background at the moment the window opens. Uncheck to set fixed colours instead.", 'buyit-together' ); ?></p>
+							<div id="bit-couleurs-fixes">
+								<label style="margin-right:1.5em"><?php esc_html_e( 'Accent', 'buyit-together' ); ?>
+									<input type="color" name="couleur_accent" value="<?php echo esc_attr( $style['couleur_accent'] ); ?>"
+									       data-var="--bit-accent"></label>
+								<label style="margin-right:1.5em"><?php esc_html_e( 'Background', 'buyit-together' ); ?>
+									<input type="color" name="couleur_fond" value="<?php echo esc_attr( $style['couleur_fond'] ); ?>"
+									       data-var="--bit-fond"></label>
+								<label><?php esc_html_e( 'Text', 'buyit-together' ); ?>
+									<input type="color" name="couleur_texte" value="<?php echo esc_attr( $style['couleur_texte'] ); ?>"
+									       data-var="--bit-texte"></label>
+								<p class="description"><?php esc_html_e( 'Pick background and text colours with enough contrast between them to stay readable.', 'buyit-together' ); ?></p>
+							</div>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="bit-rayon"><?php esc_html_e( 'Corner rounding', 'buyit-together' ); ?></label></th>
+						<td>
+							<input type="range" id="bit-rayon" name="rayon" min="0" max="32" step="1"
+							       value="<?php echo (int) $style['rayon']; ?>" data-var="--bit-rayon" data-unite="px"
+							       style="vertical-align:middle;width:200px">
+							<span id="bit-rayon-valeur"><?php echo (int) $style['rayon']; ?>px</span>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Layout', 'buyit-together' ); ?></th>
+						<td>
+							<label style="margin-right:1.5em">
+								<input type="radio" name="disposition" value="ligne" <?php checked( $style['disposition'], 'ligne' ); ?> data-apercu-disposition="ligne">
+								<?php esc_html_e( 'Row: one suggestion per line', 'buyit-together' ); ?>
+							</label>
+							<label>
+								<input type="radio" name="disposition" value="colonnes" <?php checked( $style['disposition'], 'colonnes' ); ?> data-apercu-disposition="colonnes">
+								<?php esc_html_e( 'Columns: a small grid of cards', 'buyit-together' ); ?>
+							</label>
+						</td>
+					</tr>
+				</table>
+				<?php submit_button( __( 'Save', 'buyit-together' ), 'secondary' ); ?>
+			</form>
+
+			<div class="bit-apercu">
+				<p class="description" style="margin-top:0"><?php esc_html_e( 'Preview', 'buyit-together' ); ?></p>
+				<div class="bit-modal bit-apercu__panneau" id="bit-previsu"
+				     style="<?php echo esc_attr( sprintf(
+				     	'--bit-accent:%s;--bit-fond:%s;--bit-texte:%s;--bit-rayon:%dpx;',
+				     	$style['couleur_accent'], $style['couleur_fond'], $style['couleur_texte'], (int) $style['rayon']
+				     ) ); ?>">
+					<div class="bit-modal__panneau">
+						<p class="bit-modal__ajoute">
+							<span class="bit-modal__coche" aria-hidden="true">&#10003;</span>
+							<span id="bit-previsu-message"><?php echo esc_html( $style['message_ajoute'] ); ?></span>
+							<span class="bit-modal__compte">1 item in your cart.</span>
+						</p>
+						<h3 class="bit-modal__titre" id="bit-previsu-titre"><?php echo esc_html( $style['titre'] ); ?></h3>
+						<ul class="bit-modal__liste bit-modal__liste--<?php echo esc_attr( $style['disposition'] ); ?>" id="bit-previsu-liste">
+							<?php foreach ( [ 'Adhesive Seal Strip', 'Precision Screwdriver Kit' ] as $nom_exemple ) : ?>
+								<li class="bit-modal__item">
+									<a href="#" onclick="return false">
+										<span style="display:block;width:56px;height:56px;border-radius:max(4px,calc(var(--bit-rayon)*.5));background:color-mix(in srgb, var(--bit-texte) 12%, transparent)"></span>
+										<span class="bit-modal__nom"><?php echo esc_html( $nom_exemple ); ?></span>
+										<span class="bit-modal__prix">$12.90</span>
+									</a>
+									<button type="button" class="bit-modal__ajouter"><?php esc_html_e( 'Add', 'buyit-together' ); ?></button>
+								</li>
+							<?php endforeach; ?>
+						</ul>
+						<div class="bit-modal__pied">
+							<a class="button" href="#" onclick="return false"><?php esc_html_e( 'View cart', 'buyit-together' ); ?></a>
+							<button type="button" class="bit-modal__continuer"><?php esc_html_e( 'Continue shopping', 'buyit-together' ); ?></button>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<style>
+			.bit-apercu-mise-en-page { display: flex; gap: 2.5em; flex-wrap: wrap; align-items: flex-start; }
+			.bit-apercu-mise-en-page form { flex: 1 1 380px; min-width: 320px; }
+			.bit-apercu { flex: 0 0 auto; }
+			.bit-apercu__panneau { position: static; width: 320px; max-width: 100%; margin: 0; }
+			<?php echo self::css_modal(); // phpcs:ignore WordPress.Security.EscapeOutput -- static CSS text, no user input ?>
+		</style>
+		<script>
+		( function () {
+			var previsu = document.getElementById( 'bit-previsu' );
+			if ( ! previsu ) { return; }
+			document.querySelectorAll( '#bit-form-style [data-var]' ).forEach( function ( champ ) {
+				champ.addEventListener( 'input', function () {
+					var valeur = champ.value + ( champ.dataset.unite || '' );
+					previsu.style.setProperty( champ.dataset.var, valeur );
+					if ( 'bit-rayon' === champ.id ) {
+						document.getElementById( 'bit-rayon-valeur' ).textContent = valeur;
+					}
+				} );
+			} );
+			document.querySelectorAll( '#bit-form-style [data-apercu]' ).forEach( function ( champ ) {
+				champ.addEventListener( 'input', function () {
+					document.getElementById( champ.dataset.apercu ).textContent = champ.value;
+				} );
+			} );
+			document.querySelectorAll( '#bit-form-style [data-apercu-disposition]' ).forEach( function ( champ ) {
+				champ.addEventListener( 'change', function () {
+					var liste = document.getElementById( 'bit-previsu-liste' );
+					liste.className = 'bit-modal__liste bit-modal__liste--' + champ.dataset.apercuDisposition;
+				} );
+			} );
+
+			// Case « couleurs automatiques » : grise les trois sélecteurs plutôt
+			// que de les cacher — on veut qu'on comprenne qu'ils existent, juste
+			// qu'ils ne servent à rien tant que la case reste cochée.
+			var caseAuto     = document.getElementById( 'bit-couleur-auto' );
+			var blocCouleurs = document.getElementById( 'bit-couleurs-fixes' );
+			function appliquerEtatCouleurs() {
+				var fixe = ! caseAuto.checked;
+				blocCouleurs.style.opacity = fixe ? '1' : '.45';
+				blocCouleurs.querySelectorAll( 'input[type="color"]' ).forEach( function ( c ) { c.disabled = ! fixe; } );
+			}
+			if ( caseAuto ) {
+				caseAuto.addEventListener( 'change', appliquerEtatCouleurs );
+				appliquerEtatCouleurs();
+			}
+		} )();
+		</script>
+		<?php endif; ?>
+
+
+		<?php
+	}
+
+	/**
+	 * Onglet « fiche produit » : le bloc affiché sous le résumé du produit,
+	 * alimenté par les associations calculées puis, à défaut, par les règles.
+	 */
+	private static function onglet_fiche(): void {
+		$regles   = self::regles();
+		$regles[] = [ 'termes' => [], 'produits' => [] ]; // une ligne vierge en fin de tableau
+		$termes_dispo = self::termes_disponibles();
+		?>
+		<p class="bit-intro">
+			<?php esc_html_e( "What the customer sees on the product page, before adding to the cart. These suggestions belong to the plugin and do not affect WooCommerce cross-sells.", 'buyit-together' ); ?>
+		</p>
+
+		<p><?php esc_html_e( "Associations calculated from history take priority; the rules below only serve products that do not have any yet. The calculation and its diagnosis are in the Analysis tab.", 'buyit-together' ); ?></p>
 
 		<div class="bit-section">
 		<h2><?php esc_html_e( 'Rules by family of parts', 'buyit-together' ); ?></h2>
@@ -2315,7 +2626,35 @@ final class BuyIt_Together {
 		// Autochargée : lue à chaque fiche produit, via mode_fiche().
 		update_option( 'bit_mode_fiche', $mode, true );
 
-		wp_safe_redirect( admin_url( 'admin.php?page=buyit-together&onglet=fiche&mode=1' ) );
+		wp_safe_redirect( admin_url( 'admin.php?page=buyit-together&onglet=reglages&mode=1' ) );
+		exit;
+	}
+
+	/** Enregistre l'apparence de la fenêtre d'ajout au panier. */
+	public static function enregistrer_style_modal(): void {
+		if ( ! current_user_can( 'manage_woocommerce' ) ) {
+			wp_die( esc_html__( 'Permission denied.', 'buyit-together' ) );
+		}
+		check_admin_referer( 'bit_style_modal' );
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- nonce checked above via check_admin_referer(); each field is sanitized by modal_style() when read back.
+		$style = [
+			'titre'                   => isset( $_POST['titre'] ) ? sanitize_text_field( wp_unslash( $_POST['titre'] ) ) : '',
+			'message_ajoute'          => isset( $_POST['message_ajoute'] ) ? sanitize_text_field( wp_unslash( $_POST['message_ajoute'] ) ) : '',
+			'couleur_accent'          => isset( $_POST['couleur_accent'] ) ? sanitize_hex_color( wp_unslash( $_POST['couleur_accent'] ) ) : '',
+			'couleur_fond'            => isset( $_POST['couleur_fond'] ) ? sanitize_hex_color( wp_unslash( $_POST['couleur_fond'] ) ) : '',
+			'couleur_texte'           => isset( $_POST['couleur_texte'] ) ? sanitize_hex_color( wp_unslash( $_POST['couleur_texte'] ) ) : '',
+			'rayon'                   => isset( $_POST['rayon'] ) ? absint( $_POST['rayon'] ) : 14,
+			'disposition'             => isset( $_POST['disposition'] ) ? sanitize_key( wp_unslash( $_POST['disposition'] ) ) : 'ligne',
+			// Case cochée : la fenêtre continue de suivre le thème, les trois
+			// couleurs choisies ci-dessus restent alors sans effet.
+			'couleurs_personnalisees' => ! isset( $_POST['couleur_auto'] ),
+		];
+
+		// Autochargée : lue à chaque fiche produit, via modal_style().
+		update_option( 'bit_modal_style', $style, true );
+
+		wp_safe_redirect( admin_url( 'admin.php?page=buyit-together&onglet=reglages&style=1' ) );
 		exit;
 	}
 

@@ -2,7 +2,7 @@
 # This file is distributed under the GPL-2.0-or-later license.
 msgid ""
 msgstr ""
-"Project-Id-Version: BuyIt Together 1.1.0\n"
+"Project-Id-Version: BuyIt Together 1.3.0\n"
 "POT-Creation-Date: 2026-08-25T00:00:00+00:00\n"
 "PO-Revision-Date: 2026-08-25T00:00:00+00:00\n"
 "Last-Translator: POWERLOOP\n"
@@ -477,3 +477,60 @@ msgstr "Voir le panier"
 
 msgid "Window on Add to cart only"
 msgstr "Fenêtre à l'ajout au panier uniquement"
+
+msgid "\"Added to cart\" message"
+msgstr "Message « ajouté au panier »"
+
+msgid "Accent"
+msgstr "Accent"
+
+msgid "Applies whenever the window is enabled above, whether or not the block is also shown."
+msgstr "S'applique dès que la fenêtre est activée ci-dessus, que le bloc soit aussi affiché ou non."
+
+msgid "Automatically match my theme's colours"
+msgstr "Faire correspondre automatiquement aux couleurs de mon thème"
+
+msgid "Background"
+msgstr "Fond"
+
+msgid "Colours"
+msgstr "Couleurs"
+
+msgid "Columns: a small grid of cards"
+msgstr "Colonnes : une petite grille de vignettes"
+
+msgid "Corner rounding"
+msgstr "Arrondi des coins"
+
+msgid "How and where suggestions appear to the customer. Their content is configured in the other tabs; only presentation lives here."
+msgstr "Comment et où les suggestions apparaissent au client. Leur contenu se configure dans les autres onglets ; seule la présentation vit ici."
+
+msgid "Layout"
+msgstr "Disposition"
+
+msgid "Pick background and text colours with enough contrast between them to stay readable."
+msgstr "Choisissez un fond et un texte avec assez de contraste entre eux pour rester lisibles."
+
+msgid "Preview"
+msgstr "Aperçu"
+
+msgid "Reads the colour of the real Add to cart button and the page background at the moment the window opens. Uncheck to set fixed colours instead."
+msgstr "Lit la couleur du vrai bouton Ajouter au panier et du fond de page au moment où la fenêtre s'ouvre. Décochez pour fixer des couleurs à la place."
+
+msgid "Row: one suggestion per line"
+msgstr "Ligne : une suggestion par ligne"
+
+msgid "Settings"
+msgstr "Réglages"
+
+msgid "Suggestions title"
+msgstr "Titre des suggestions"
+
+msgid "Text"
+msgstr "Texte"
+
+msgid "Window appearance"
+msgstr "Apparence de la fenêtre"
+
+msgid "Window appearance saved."
+msgstr "Apparence de la fenêtre enregistrée."

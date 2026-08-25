@@ -40,8 +40,6 @@ affichées d'un seul geste, avant validation.
 
 ## Organisation de l'écran
 
-Trois onglets, correspondant à trois moments du parcours client :
-
 | Onglet | Rôle | Données modifiées |
 |---|---|---|
 | Analyse | Lecture : calcul, diagnostic, recommandations, classement | aucune, sauf application explicite |
@@ -49,6 +47,7 @@ Trois onglets, correspondant à trois moments du parcours client :
 | Ventes croisées du panier | Attribution en masse | ventes croisées WooCommerce |
 | Montées en gamme | Alternatives supérieures, par catégorie | montées en gamme WooCommerce |
 | Éditeur par catégorie | Relecture ligne à ligne | suggestions et ventes croisées |
+| Réglages | Où et comment afficher les suggestions ; apparence de la fenêtre | présentation uniquement, jamais le contenu |
 
 L'éditeur et l'onglet Montées en gamme acceptent une catégorie, une étiquette,
 des produits choisis un à un, ou n'importe quelle combinaison des trois. Le
@@ -171,7 +170,7 @@ aller-retour en haut de page à chaque application.
 ### La fenêtre d'ajout au panier
 
 Réglage `bit_mode_fiche` (`bloc` par défaut, `modal`, ou `both`), choisi dans
-l'onglet Suggestions sur la fiche produit. Masqué et forcé à `bloc` si
+l'onglet Réglages. Masqué et forcé à `bloc` si
 `store_api_disponible()` renvoie faux (WooCommerce < 8.3) : sans la Store API
 stable en cœur, la fenêtre ne fonctionnerait pas, mieux vaut ne pas proposer
 le choix que de le laisser choisir une option cassée.
@@ -200,6 +199,29 @@ message discret et auto-effaçant (`role="alert"`) le remplace.
 Les suggestions ne proposent un ajout direct en un clic que pour les produits
 simples (`WC_Product::is_type('simple')`) ; un produit à variations renvoie
 vers sa fiche, faute d'écran pour choisir une variation dans la fenêtre.
+
+### Apparence de la fenêtre
+
+Réglage `bit_modal_style` (option unique, tableau), lu par `modal_style()`
+avec repli sur des valeurs sûres à chaque champ — un champ vidé ou une couleur
+invalide ne doit jamais produire une fenêtre cassée. Onglet Réglages, avec un
+aperçu qui se met à jour en direct (`input`/`change` en JavaScript sur les
+mêmes variables CSS que la vraie fenêtre).
+
+Le CSS de la fenêtre est écrit une seule fois, dans `css_modal()`, partagée
+entre la vraie fenêtre côté client et l'aperçu de l'écran de réglages : deux
+copies auraient fini par diverger, et l'aperçu aurait menti sur le rendu réel.
+Les couleurs et le rayon d'arrondi sont des variables CSS (`--bit-accent`,
+`--bit-fond`, `--bit-texte`, `--bit-rayon`), posées en `style` inline par
+l'appelant plutôt que codées en dur dans la feuille.
+
+Par défaut (`couleurs_personnalisees` à faux), aucune couleur n'est posée par
+PHP : un script lit la couleur réellement appliquée par le thème au bouton
+« Ajouter au panier » (`getComputedStyle`) et au fond de la page, et les
+applique à la fenêtre au chargement. Une case à cocher (« Faire correspondre
+automatiquement aux couleurs de mon thème ») bascule vers trois couleurs
+fixes ; elle reste réversible — recocher la case revient à la détection
+automatique même après avoir enregistré des couleurs fixes.
 
 ## Compatibilité
 

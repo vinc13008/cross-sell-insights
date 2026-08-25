@@ -4,7 +4,7 @@ Tags: woocommerce, cross-sells, related products, upsell, recommendations
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 1.2.0
+Stable tag: 1.3.0
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -96,6 +96,12 @@ Yes. It reads orders from the HPOS tables directly.
 3. The suggestion block as customers see it.
 
 == Changelog ==
+
+= 1.3.0 =
+* The Add to cart window has been redesigned: rounded panel, soft shadow, a checkmark badge, an entrance animation, and a proper two-layout choice (row or a small grid of cards).
+* New: the window can now be customised — suggestions title, "added to cart" message, accent/background/text colours, corner rounding, and layout — from a new Settings tab, with a live preview.
+* By default the window automatically matches the site's own colours (the real Add to cart button and page background), rather than an arbitrary fixed colour. A checkbox switches to fixed colours instead.
+* New "Settings" tab: where suggestions appear (block, window, or both) and the window's appearance now live together, instead of being mixed into Product page suggestions.
 
 = 1.2.0 =
 * New: an optional window can open right after "Add to cart" on the product page, showing the same suggestions with their own "Add" buttons — the customer never leaves the page. Uses WooCommerce's own public cart API (Store API), so it works alongside whatever the theme's Add to cart button already does.

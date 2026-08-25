@@ -15,7 +15,7 @@
 defined( 'WP_UNINSTALL_PLUGIN' ) || exit;
 
 // Réglages et journaux.
-foreach ( [ 'bit_regles', 'bit_exclus', 'bit_non_recommandes', 'bit_sans_suggestions', 'bit_historique', 'bit_dernier_calcul', 'bit_mode_fiche' ] as $option ) {
+foreach ( [ 'bit_regles', 'bit_exclus', 'bit_non_recommandes', 'bit_sans_suggestions', 'bit_historique', 'bit_dernier_calcul', 'bit_mode_fiche', 'bit_modal_style' ] as $option ) {
 	delete_option( $option );
 }
 
