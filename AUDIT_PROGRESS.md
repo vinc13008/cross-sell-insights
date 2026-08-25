@@ -11,8 +11,8 @@ tout est relu.
 
 | Contrôle | Commande | Résultat initial |
 |---|---|---|
-| lint PHP | `docker run --rm -v "$PWD":/w -w /w php:8.4-cli sh -c 'php -l buyit-together.php && php -l uninstall.php'` | Aucune erreur de syntaxe sur les deux fichiers |
-| Plugin Check (dépôt WordPress.org) | WP + WooCommerce + Storefront jetables (Docker isolé), `wp plugin check buyit-together` | Zéro remontée sur le code ; seul `.gitignore` signalé (`hidden_files`) — fichier de développement, exclu du paquet livré, connu et sans action |
+| lint PHP | `docker run --rm -v "$PWD":/w -w /w php:8.4-cli sh -c 'php -l cross-sell-insights.php && php -l uninstall.php'` | Aucune erreur de syntaxe sur les deux fichiers |
+| Plugin Check (dépôt WordPress.org) | WP + WooCommerce + Storefront jetables (Docker isolé), `wp plugin check cross-sell-insights` | Zéro remontée sur le code ; seul `.gitignore` signalé (`hidden_files`) — fichier de développement, exclu du paquet livré, connu et sans action |
 
 Pas de suite de tests automatisés dans ce dépôt (pas de `composer.json`, pas de
 `phpunit.xml`, pas de CI) — plugin WordPress mono-fichier. Les commandes
@@ -48,7 +48,7 @@ cohérence se vérifie sur le `.po`).
 #### [MINEUR] Docblock orphelin devant `css_modal()`
 
 - **Statut** : CONFIRMÉ
-- **Où** : `buyit-together.php`, entre `afficher_bloc()` (fin) et `css_modal()`
+- **Où** : `cross-sell-insights.php`, entre `afficher_bloc()` (fin) et `css_modal()`
   (avant correction — lignes ~328-341)
 - **Déclencheur** : lecture du code par un développeur entre `afficher_bloc()`
   et `css_modal()`
@@ -90,7 +90,7 @@ cohérence se vérifie sur le `.po`).
 - **Statut** : écartée après falsification (pas un défaut)
 - **Où** : fermeture `nonce` (ligne 542) lue par `nonceCourant()` (ligne 556),
   utilisée à la fois par le gestionnaire `submit` principal et par chaque
-  bouton `.bit-modal__ajouter` du modal (ligne 667)
+  bouton `.csins-modal__ajouter` du modal (ligne 667)
 - **Hypothèse initiale** : deux clics rapprochés sur deux boutons « Ajouter »
   différents liraient le même nonce en cache avant qu'aucune réponse ne l'ait
   fait tourner ; le second appel échouerait sur un nonce déjà consommé.
@@ -112,11 +112,11 @@ cohérence se vérifie sur le `.po`).
 #### [MAJEUR] « Voir le produit » d'une taille différente de « Ajouter »
 
 - **Statut** : CONFIRMÉ (signalé par l'utilisateur, capture du site réel à l'appui)
-- **Où** : `css_modal()`, règles `.bit-modal__ajouter, .bit-modal__voir, …`
+- **Où** : `css_modal()`, règles `.csins-modal__ajouter, .csins-modal__voir, …`
 - **Déclencheur** : une suggestion de type produit variable — elle ne peut pas
   s'ajouter en un clic (il faut choisir les options), donc `afficher_modal()`
-  rend un `<a class="bit-modal__voir">` au lieu d'un
-  `<button class="bit-modal__ajouter">`.
+  rend un `<a class="csins-modal__voir">` au lieu d'un
+  `<button class="csins-modal__ajouter">`.
 - **Conséquence** : sur le thème réel du site (Flatsome), le lien ne s'étirait
   pas comme le bouton malgré `width: 100%` sur les deux, produisant une fiche
   visiblement plus étroite que ses voisines dans la même rangée.
@@ -183,7 +183,7 @@ cohérence se vérifie sur le `.po`).
 - **Statut** : CONFIRMÉ
 - **Où** : racine de l'extension (`AUDIT_PROGRESS.md`), et absence de
   `.distignore`
-- **Déclencheur** : `wp plugin check buyit-together`
+- **Déclencheur** : `wp plugin check cross-sell-insights`
 - **Conséquence** : `AUDIT_PROGRESS.md` (ce journal) et `.gitignore` sont des
   fichiers de développement qui se seraient retrouvés dans le paquet livré à
   l'utilisateur final. Aucun risque d'exécution, mais du bruit dans une
@@ -251,16 +251,16 @@ cohérence se vérifie sur le `.po`).
   produits concernés ont été exclus, ou (cas le plus vicieux) à cause du
   constat précédent.
 - **Conséquence** : la sortie anticipée saute à la fois la purge des
-  associations et la mise à jour de `bit_dernier_calcul`. Les fiches produit
+  associations et la mise à jour de `csins_dernier_calcul`. Les fiches produit
   continuent donc d'afficher des suggestions tirées de données qui n'existent
   plus, et l'écran d'administration continue d'annoncer l'ancien bilan. Un
   administrateur qui clique « Recalculer maintenant » ne voit aucune erreur et
   retrouve son écran inchangé : rien ne lui indique que le calcul n'a rien
   trouvé.
-- **Preuve** : produit 13 porteur de `_bit_compagnons = [15,17]` et
-  `bit_dernier_calcul` fixé à `2020-01-01 / 42 produits / 999 commandes`,
+- **Preuve** : produit 13 porteur de `_csins_compagnons = [15,17]` et
+  `csins_dernier_calcul` fixé à `2020-01-01 / 42 produits / 999 commandes`,
   puis `recalculer()` sans aucune commande dans la fenêtre → renvoie `0`,
-  `_bit_compagnons` vaut toujours `[15,17]`, et `bit_dernier_calcul` affiche
+  `_csins_compagnons` vaut toujours `[15,17]`, et `csins_dernier_calcul` affiche
   toujours `42 produits / 999 commandes`.
 - **Falsification** : aucun autre chemin de purge — `activation()` et
   `desactivation()` ne touchent que la tâche planifiée, et `uninstall.php` ne
@@ -268,11 +268,11 @@ cohérence se vérifie sur le `.po`).
   ici) ; intentionnalité **partielle** — préserver les associations plutôt que
   de tout effacer sur un calcul vide est une prudence défendable (une panne
   passagère de base ne devrait pas détruire les données). En revanche, laisser
-  `bit_dernier_calcul` intact n'est défendable sous aucune lecture : le calcul
+  `csins_dernier_calcul` intact n'est défendable sous aucune lecture : le calcul
   a bien tourné et a produit zéro, l'écran ne devrait pas continuer à annoncer
   42 produits.
 - **Correctif** : option (b), retenue par le propriétaire du projet le
-  2026-08-25. `bit_dernier_calcul` est désormais écrit même quand le calcul ne
+  2026-08-25. `csins_dernier_calcul` est désormais écrit même quand le calcul ne
   trouve rien (date du jour, 0 produit, et le nombre de commandes réellement
   vues) ; les associations déjà calculées sont laissées en place. Le nombre de
   commandes est conservé parce qu'il porte une information : « 0 produit
@@ -321,7 +321,7 @@ cohérence se vérifie sur le `.po`).
   et le lien correspondant plus bas dans la même méthode
 - **Déclencheur** : n'importe quelle page tierce faisant charger à un
   administrateur connecté l'URL
-  `admin.php?page=buyit-together&onglet=analyse&analyser=1`
+  `admin.php?page=cross-sell-insights&onglet=analyse&analyser=1`
 - **Conséquence** : le paramètre force `analyser( true )`, qui contourne le
   cache d'une heure et relance une agrégation sur tout l'historique des
   commandes (jointure sur trois tables, 365 jours). Aucun jeton, aucune
@@ -330,13 +330,13 @@ cohérence se vérifie sur le `.po`).
   limite à la charge serveur.
 - **Preuve** : le paramètre était lu sans aucune vérification, alors que
   l'autre opération lourde de l'écran (`recalcul_manuel`) passe, elle, par
-  `admin_post` avec `check_admin_referer( 'bit_recalcul' )` — l'incohérence
+  `admin_post` avec `check_admin_referer( 'csins_recalcul' )` — l'incohérence
   entre les deux chemins est visible dans le code.
 - **Falsification** : pas de garde-fou ailleurs (aucun `check_admin_referer`
   ni contrôle de capacité sur ce chemin autre que l'accès à la page) ; cas non
   impossible (simple URL) ; non intentionnel — le chemin jumeau est protégé,
   celui-ci ne l'était pas.
-- **Correctif** : le lien est passé par `wp_nonce_url( …, 'bit_analyser' )` et
+- **Correctif** : le lien est passé par `wp_nonce_url( …, 'csins_analyser' )` et
   le forçage n'a lieu que si `wp_verify_nonce()` réussit. Un lien périmé ou
   sans jeton retombe simplement sur l'analyse en cache — aucune erreur
   affichée à l'utilisateur.
@@ -402,14 +402,14 @@ stricte), et Plugin Check — qui exécute les sondes `WordPress.Security.Escape
 #### Désinstallation — vérifiée, aucun défaut
 
 Recoupement automatique des options réellement écrites par l'extension contre
-celles nettoyées par `uninstall.php` : les huit options (`bit_regles`,
-`bit_exclus`, `bit_non_recommandes`, `bit_historique`, `bit_dernier_calcul`,
-`bit_mode_fiche`, `bit_modal_style`, transient `bit_analyse`) et les deux
-métadonnées (`_bit_compagnons`, `_bit_manuel`) sont couvertes. `_crosssell_ids`
+celles nettoyées par `uninstall.php` : les huit options (`csins_regles`,
+`csins_exclus`, `csins_non_recommandes`, `csins_historique`, `csins_dernier_calcul`,
+`csins_mode_fiche`, `csins_modal_style`, transient `csins_analyse`) et les deux
+métadonnées (`_csins_compagnons`, `_csins_manuel`) sont couvertes. `_crosssell_ids`
 est délibérément épargnée — c'est une donnée WooCommerce, pas une donnée de
 l'extension, et le fichier le documente.
 
-`bit_sans_suggestions` est supprimée par `uninstall.php` sans être jamais
+`csins_sans_suggestions` est supprimée par `uninstall.php` sans être jamais
 écrite ni lue ailleurs. **Non retenu comme défaut** : nettoyer une option
 laissée par une version antérieure est une pratique légitime, et
 `delete_option()` sur une option absente est sans effet. La retirer risquerait
@@ -424,7 +424,7 @@ n'a pas joué).
 
 ## Passe transversale
 
-- **Cohérence des versions** : `buyit-together.php` (en-tête `Version`) et
+- **Cohérence des versions** : `cross-sell-insights.php` (en-tête `Version`) et
   `readme.txt` (`Stable tag`) sont tous deux à 1.1.1. Aucune constante de
   version interne à synchroniser (il n'y en a pas).
 - **Cohérence des traductions** : gabarit `.pot` régénéré après les
@@ -440,13 +440,13 @@ n'a pas joué).
 
 | Constat | Modification | Validée par | Résultat |
 |---|---|---|---|
-| Docblock orphelin devant `css_modal()` | Déplacement du docblock d'`afficher_modal()` vers sa déclaration ; `css_modal()` garde le sien | `php -l buyit-together.php` (Docker `php:8.4-cli`) | Aucune erreur de syntaxe après correction |
+| Docblock orphelin devant `css_modal()` | Déplacement du docblock d'`afficher_modal()` vers sa déclaration ; `css_modal()` garde le sien | `php -l cross-sell-insights.php` (Docker `php:8.4-cli`) | Aucune erreur de syntaxe après correction |
 | « Voir le produit » d'une taille différente de « Ajouter » | Largeur fixe `118px !important` sur les deux, + `!important` sur `box-sizing`, `display`, `font-size`, `padding` | Mesure réelle en navigateur (Chrome sans interface, CDP) sur le balisage du plugin, 3 produits simples + 1 variable | Une seule largeur (118 px) et une seule hauteur (27,81 px) pour les 4 ; aucun défilement |
 | Commentaires de traduction concurrents | Un seul commentaire par paire `_n()` | `wp i18n make-pot` | Plus aucun avertissement (2 auparavant) |
 | Texte d'exemple non traduisible dans l'aperçu | Réutilisation de la paire `_n()` de la fenêtre réelle | Gabarit `.pot` régénéré | La chaîne apparaît désormais dans le gabarit, msgid partagé |
-| Journal d'audit livrable dans le paquet | Ajout d'un `.distignore` | `wp plugin check buyit-together` | Zéro remontée sur le code ; les 2 restantes portent sur des fichiers désormais exclus du paquet |
+| Journal d'audit livrable dans le paquet | Ajout d'un `.distignore` | `wp plugin check cross-sell-insights` | Zéro remontée sur le code ; les 2 restantes portent sur des fichiers désormais exclus du paquet |
 | Stockage classique → tout à zéro en silence | `stockage_hpos()` + avertissement non masquable dans l'écran d'admin | Bascule réelle du site de test dans les deux sens | Stockage classique → avertissement affiché ; HPOS → aucun. Pas de faux positif |
-| Recalcul vide laissant les anciens chiffres | Option (b) : `bit_dernier_calcul` mis à jour, associations préservées | Scénario d'origine rejoué + non-régression du chemin nominal (3 commandes réelles) | Chemin vide : associations inchangées, bilan à jour. Chemin nominal : purge et écriture correctes, inchangé |
+| Recalcul vide laissant les anciens chiffres | Option (b) : `csins_dernier_calcul` mis à jour, associations préservées | Scénario d'origine rejoué + non-régression du chemin nominal (3 commandes réelles) | Chemin vide : associations inchangées, bilan à jour. Chemin nominal : purge et écriture correctes, inchangé |
 | Lien « Relancer l'analyse » sans jeton | `wp_nonce_url()` + `wp_verify_nonce()`, repli silencieux sur le cache | Test des deux sens en environnement réel | Sans jeton → cache ; avec jeton → analyse fraîche |
 | Docblock périmé contredisant `activation()` | Suppression du bloc périmé | `php -l` | Aucune erreur de syntaxe |
 | FAQ trompeuse sur le stockage | Réponse réécrite : HPOS est requis, avec le chemin du réglage | Relecture | Cohérente avec le comportement établi empiriquement |
@@ -462,7 +462,7 @@ n'a pas joué).
   boutiques en stockage classique.
 - **Rien n'est commité ni poussé** — conformément au garde-fou de la mission.
   Les modifications ci-dessus sont dans le dossier de travail uniquement, et la
-  version est passée à 1.1.1 (`buyit-together.php`, `readme.txt`), après
+  version est passée à 1.1.1 (`cross-sell-insights.php`, `readme.txt`), après
   renumérotation demandée par le propriétaire du projet : la progression
   1.2.0 → 1.3.x était jugée trop rapide, et rien n'ayant jamais été publié
   (aucune étiquette Git, pas de dépôt WordPress.org), renuméroter était sans
@@ -485,6 +485,27 @@ n'a pas joué).
   parcours complet « clic sur Ajouter → Store API → fenêtre » n'a pas pu être
   rejoué de bout en bout dans cette session ; il l'avait été lors des versions
   précédentes.
+
+## Suites données après l'audit
+
+- **Prise en charge du stockage classique des commandes** (constat MAJEUR du
+  Lot C, dont le correctif d'audit se limitait à avertir). `paires_reelles()`
+  demande désormais à WooCommerce quel rangement fait foi et lit celui-là. Les
+  lignes de commande n'ayant jamais été migrées, seules la table d'en-tête, la
+  colonne de date et celle de statut changent : une seule requête paramétrée,
+  pas deux qui auraient divergé. L'avertissement, devenu sans objet, est
+  retiré ; la FAQ et le README disent maintenant que les deux rangements
+  fonctionnent. Vérifié dans les deux modes avec de vraies commandes :
+  classique → 3 commandes vues, 2 produits appariés ; HPOS → 4 et 2.
+- **Renommage** de « BuyIt Together » en « Cross-Sell Insights », le nom ayant
+  été refusé à la revue WordPress.org comme trop proche des extensions
+  « Frequently Bought Together » existantes. Le préfixe interne passe de `bit_`
+  à `csins_` (options, métadonnées, crochets, nonces, classes CSS, domaine de
+  traduction). Une reprise unique migre les données de l'ancien préfixe au
+  premier chargement, sans quoi les sites déjà installés auraient perdu leurs
+  réglages et leurs suggestions saisies à la main — les seules qu'aucun
+  recalcul ne peut reconstituer. Vérifiée sur des données à l'ancien préfixe :
+  tout est repris, les anciennes clés effacées.
 
 ## Non couvert
 

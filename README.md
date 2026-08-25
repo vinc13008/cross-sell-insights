@@ -1,4 +1,4 @@
-# BuyIt Together
+# Cross-Sell Insights
 
 Propose sur chaque fiche produit les pièces **réellement achetées avec elle**,
 déduites de l'historique de commandes. Diagnostique aussi les ventes croisées
@@ -68,7 +68,7 @@ Le bloc de l'extension s'accroche à `woocommerce_after_single_product_summary`
 en priorité **16** : après les montées en gamme de WooCommerce (15), avant les
 produits similaires (20). À 15, l'ordre d'affichage aurait été indéterminé.
 
-Une suggestion saisie à la main est stockée dans `_bit_manuel`, distincte des
+Une suggestion saisie à la main est stockée dans `_csins_manuel`, distincte des
 associations calculées : sans cette séparation, le recalcul hebdomadaire
 effacerait silencieusement toute correction manuelle. La saisie est prioritaire.
 
@@ -86,33 +86,33 @@ Réglages : **WooCommerce → Achetés ensemble**.
 
 | Filtre | Rôle | Défaut |
 |---|---|---|
-| `bit_nb_affiches` | Compagnons montrés sur la fiche | `3` |
-| `bit_min_paires` | Occurrences minimales d'une paire | `2` |
-| `bit_fenetre_jours` | Profondeur d'historique analysée | `365` |
-| `bit_seuil_reco` | Seuil d'une recommandation | `3` |
-| `bit_historique_max` | Opérations annulables conservées | `10` |
-| `bit_exclus` | Produits à ne jamais proposer ailleurs | option |
-| `bit_non_recommandes` | Fiches retirées des recommandations | option |
-| `bit_compagnons` | Liste finale, avant affichage | — |
-| `bit_titre` | Titre du bloc | — |
+| `csins_nb_affiches` | Compagnons montrés sur la fiche | `3` |
+| `csins_min_paires` | Occurrences minimales d'une paire | `2` |
+| `csins_fenetre_jours` | Profondeur d'historique analysée | `365` |
+| `csins_seuil_reco` | Seuil d'une recommandation | `3` |
+| `csins_historique_max` | Opérations annulables conservées | `10` |
+| `csins_exclus` | Produits à ne jamais proposer ailleurs | option |
+| `csins_non_recommandes` | Fiches retirées des recommandations | option |
+| `csins_compagnons` | Liste finale, avant affichage | — |
+| `csins_titre` | Titre du bloc | — |
 
 ## Notes techniques
 
-Le stockage passe par la meta `_bit_compagnons`, purgée via
+Le stockage passe par la meta `_csins_compagnons`, purgée via
 `delete_post_meta_by_key()` — et non en SQL direct : le site utilise un cache
 objet persistant, qu'une suppression en base laisserait périmé.
 
-Les sauvegardes de ventes croisées sont **empilées** dans `bit_historique`,
+Les sauvegardes de ventes croisées sont **empilées** dans `csins_historique`,
 jamais écrasées : deux fonctionnalités modifient les mêmes données, et une
 option unique ferait perdre le moyen d'annuler l'opération précédente.
 
-L'analyse est mise en cache une heure (`bit_analyse`).
+L'analyse est mise en cache une heure (`csins_analyse`).
 
-Deux listes d'exclusion existent, symétriques et indépendantes. `bit_exclus`
+Deux listes d'exclusion existent, symétriques et indépendantes. `csins_exclus`
 empêche un produit d'**être proposé** : il est filtré au comptage des paires et
 à l'affichage — le second n'est pas redondant, une suggestion saisie à la main
 ou produite par une règle de repli ne passant jamais par le calcul.
-`bit_non_recommandes` est d'une autre nature : réglage d'écran, non
+`csins_non_recommandes` est d'une autre nature : réglage d'écran, non
 d'affichage. La fiche sort de la colonne « Sur cette fiche produit » du tableau
 de recommandations, mais garde son bloc côté client et continue de compter dans
 le calcul comme dans le classement.
@@ -127,7 +127,7 @@ implémentations du même écran finiraient par diverger. Le paramètre `depuis`
 sert de fil d'Ariane et survit à un enregistrement — il ne pouvait pas s'appeler
 `retour`, nom déjà pris par le formulaire de l'éditeur.
 
-L'habillage est émis par `styles()`, portée par `.bit-wrap` : jetons de
+L'habillage est émis par `styles()`, portée par `.csins-wrap` : jetons de
 couleur en variables CSS, cartes, tuiles de chiffres et jauge de correspondance.
 Le taux de correspondance est la donnée la plus parlante de l'écran, il est donc
 traité en chiffre-héros plutôt qu'en phrase. La couleur y indique un **état**
@@ -156,7 +156,7 @@ par défaut, cachant les chiffres qu'on venait justement de rafraîchir. Corrig�
 en fixant `&onglet=analyse` dans la redirection.
 
 Les tuiles de l'onglet Analyse sont des ancres vers la section qui explique le
-chiffre (`#bit-calcul`, `#bit-recommandations`) : un résumé n'a d'intérêt que
+chiffre (`#csins-calcul`, `#csins-recommandations`) : un résumé n'a d'intérêt que
 si on peut creuser sans chercher où regarder. La jauge de correspondance
 s'anime au chargement plutôt que de s'afficher pré-remplie — deux passages par
 `requestAnimationFrame` avant de porter sa largeur à la valeur réelle, pour que
@@ -169,7 +169,7 @@ aller-retour en haut de page à chaque application.
 
 ### La fenêtre d'ajout au panier
 
-Réglage `bit_mode_fiche` (`bloc` par défaut, `modal`, ou `both`), choisi dans
+Réglage `csins_mode_fiche` (`bloc` par défaut, `modal`, ou `both`), choisi dans
 l'onglet Réglages. Masqué et forcé à `bloc` si
 `store_api_disponible()` renvoie faux (WooCommerce < 8.3) : sans la Store API
 stable en cœur, la fenêtre ne fonctionnerait pas, mieux vaut ne pas proposer
@@ -202,7 +202,7 @@ vers sa fiche, faute d'écran pour choisir une variation dans la fenêtre.
 
 ### Apparence de la fenêtre
 
-Réglage `bit_modal_style` (option unique, tableau), lu par `modal_style()`
+Réglage `csins_modal_style` (option unique, tableau), lu par `modal_style()`
 avec repli sur des valeurs sûres à chaque champ — un champ vidé ou une couleur
 invalide ne doit jamais produire une fenêtre cassée. Onglet Réglages, avec un
 aperçu qui se met à jour en direct (`input`/`change` en JavaScript sur les
@@ -211,8 +211,8 @@ mêmes variables CSS que la vraie fenêtre).
 Le CSS de la fenêtre est écrit une seule fois, dans `css_modal()`, partagée
 entre la vraie fenêtre côté client et l'aperçu de l'écran de réglages : deux
 copies auraient fini par diverger, et l'aperçu aurait menti sur le rendu réel.
-Les couleurs et le rayon d'arrondi sont des variables CSS (`--bit-accent`,
-`--bit-fond`, `--bit-texte`, `--bit-rayon`), posées en `style` inline par
+Les couleurs et le rayon d'arrondi sont des variables CSS (`--csins-accent`,
+`--csins-fond`, `--csins-texte`, `--csins-rayon`), posées en `style` inline par
 l'appelant plutôt que codées en dur dans la feuille.
 
 Par défaut (`couleurs_personnalisees` à faux), aucune couleur n'est posée par
@@ -234,7 +234,7 @@ ouverte. Deux décisions en découlent :
   ce qui rendait la fenêtre trop haute pour tenir sans défiler. Repéré en
   testant avec de vraies photos non carrées plutôt qu'avec des vignettes déjà
   carrées.
-- **Plafonné à `NB_MODAL` suggestions** (4 par défaut, filtre `bit_nb_modal`),
+- **Plafonné à `NB_MODAL` suggestions** (4 par défaut, filtre `csins_nb_modal`),
   appliqué dans `afficher_modal()` — pas dans `suggestions_pour()`, dont le
   bloc de fiche se sert aussi et qui peut se permettre une liste plus longue
   puisqu'il fait simplement grandir la page.
@@ -246,7 +246,9 @@ seulement les noms de test courts.
 
 ## Compatibilité
 
-WooCommerce avec stockage HPOS (`wp_wc_orders`), PHP 8.0+, WordPress 6.0+.
+WooCommerce (les deux rangements de commandes sont pris en charge : tables
+HPOS `wp_wc_orders` ou stockage classique dans `wp_posts`, l'extension suit
+celui du site), PHP 8.0+, WordPress 6.0+.
 
 ## Publication
 

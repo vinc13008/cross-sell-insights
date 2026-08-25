@@ -1,7 +1,7 @@
 <?php
 /**
- * Plugin Name:       BuyIt Together
- * Plugin URI:        https://github.com/vinc13008/buyit-together
+ * Plugin Name:       Cross-Sell Insights
+ * Plugin URI:        https://github.com/vinc13008/cross-sell-insights
  * Description:       Shows on each product page the parts customers actually bought with it, deduced from your order history. No per-product setup: associations are recalculated weekly.
  * Version:           1.1.1
  * Requires at least: 6.0
@@ -9,20 +9,20 @@
  * Author:            POWERLOOP
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
- * Text Domain:       buyit-together
+ * Text Domain:       cross-sell-insights
  * Domain Path:       /languages
  * WC requires at least: 7.0
  * WC tested up to:   11.0
  *
- * @package BuyIt_Together
+ * @package Cross_Sell_Insights
  */
 
 defined( 'ABSPATH' ) || exit;
 
-final class BuyIt_Together {
+final class Cross_Sell_Insights {
 
 	/** Meta des associations calculées, réécrite à chaque recalcul. */
-	private const META = '_bit_compagnons';
+	private const META = '_csins_compagnons';
 
 	/**
 	 * Meta des suggestions saisies à la main dans l'éditeur.
@@ -30,10 +30,10 @@ final class BuyIt_Together {
 	 * Séparée du calcul : sans cela, le recalcul hebdomadaire effacerait
 	 * silencieusement toute correction manuelle. Elle est prioritaire.
 	 */
-	private const META_MANUEL = '_bit_manuel';
+	private const META_MANUEL = '_csins_manuel';
 
 	/** Hook du recalcul hebdomadaire. */
-	private const CRON = 'bit_recalcul';
+	private const CRON = 'csins_recalcul';
 
 	/** Réglages par défaut, surchargeables par filtre. */
 	private const NB_AFFICHES   = 3;   // compagnons montrés sur la fiche
@@ -41,7 +41,7 @@ final class BuyIt_Together {
 	private const FENETRE_JOURS = 365; // profondeur d'historique analysée
 	// La fenêtre a une taille fixe et pas de défilement : contrairement au bloc
 	// de fiche, elle ne peut pas simplement s'allonger si on lui donne trop de
-	// suggestions. `_bit_manuel` n'étant pas plafonné à la saisie, la limite se
+	// suggestions. `_csins_manuel` n'étant pas plafonné à la saisie, la limite se
 	// prend ici, à l'affichage.
 	private const NB_MODAL = 4;
 
@@ -50,26 +50,84 @@ final class BuyIt_Together {
 		// WordPress.org, les traductions sont servies automatiquement d'après le
 		// slug de l'extension, et l'appeler soi-même est découragé depuis 4.6.
 
+		self::reprendre_donnees_bit();
+
 		add_action( self::CRON, [ self::class, 'recalculer' ] );
 		// Priorité 16 : après les montées en gamme de WooCommerce (15), avant les
 		// produits similaires (20). À 15, l'ordre d'affichage aurait été indéterminé.
 		add_action( 'woocommerce_after_single_product_summary', [ self::class, 'afficher' ], 16 );
 		add_action( 'admin_menu', [ self::class, 'menu' ] );
-		add_action( 'admin_post_bit_recalcul', [ self::class, 'recalcul_manuel' ] );
-		add_action( 'admin_post_bit_regles', [ self::class, 'enregistrer_regles' ] );
-		add_action( 'admin_post_bit_exclus', [ self::class, 'enregistrer_exclus' ] );
-		add_action( 'admin_post_bit_muets', [ self::class, 'enregistrer_muets' ] );
-		add_action( 'admin_post_bit_masse', [ self::class, 'appliquer_masse' ] );
-		add_action( 'admin_post_bit_annuler', [ self::class, 'annuler_masse' ] );
-		add_action( 'admin_post_bit_recos', [ self::class, 'appliquer_recos' ] );
-		add_action( 'admin_post_bit_editeur', [ self::class, 'enregistrer_editeur' ] );
-		add_action( 'admin_post_bit_mode', [ self::class, 'enregistrer_mode' ] );
-		add_action( 'admin_post_bit_style_modal', [ self::class, 'enregistrer_style_modal' ] );
-		add_filter( 'bit_compagnons', [ self::class, 'repli_regles' ], 10, 2 );
+		add_action( 'admin_post_csins_recalcul', [ self::class, 'recalcul_manuel' ] );
+		add_action( 'admin_post_csins_regles', [ self::class, 'enregistrer_regles' ] );
+		add_action( 'admin_post_csins_exclus', [ self::class, 'enregistrer_exclus' ] );
+		add_action( 'admin_post_csins_muets', [ self::class, 'enregistrer_muets' ] );
+		add_action( 'admin_post_csins_masse', [ self::class, 'appliquer_masse' ] );
+		add_action( 'admin_post_csins_annuler', [ self::class, 'annuler_masse' ] );
+		add_action( 'admin_post_csins_recos', [ self::class, 'appliquer_recos' ] );
+		add_action( 'admin_post_csins_editeur', [ self::class, 'enregistrer_editeur' ] );
+		add_action( 'admin_post_csins_mode', [ self::class, 'enregistrer_mode' ] );
+		add_action( 'admin_post_csins_style_modal', [ self::class, 'enregistrer_style_modal' ] );
+		add_filter( 'csins_compagnons', [ self::class, 'repli_regles' ], 10, 2 );
 
 		if ( ! wp_next_scheduled( self::CRON ) ) {
 			wp_schedule_event( time() + HOUR_IN_SECONDS, 'weekly', self::CRON );
 		}
+	}
+
+	/**
+	 * Reprend les données de l'ancien nom de l'extension.
+	 *
+	 * L'extension s'est d'abord appelée « BuyIt Together » et préfixait tout en
+	 * bit_. Le changement de nom aurait laissé ces données orphelines : réglages,
+	 * règles, exclusions et surtout les suggestions saisies à la main, qu'aucun
+	 * recalcul ne peut reconstituer puisqu'elles ne viennent pas de l'historique.
+	 * On les reprend une fois, puis on efface les anciennes clés.
+	 *
+	 * Le drapeau est autochargé et lu à chaque requête : une option déjà en
+	 * mémoire coûte moins qu'un test plus fin.
+	 */
+	private static function reprendre_donnees_bit(): void {
+		if ( get_option( 'csins_reprise_bit' ) ) {
+			return;
+		}
+
+		// true = autochargée, comme elles l'étaient sous l'ancien nom.
+		$options = [
+			'regles'         => true,
+			'exclus'         => true,
+			'mode_fiche'     => true,
+			'modal_style'    => true,
+			'non_recommandes' => false,
+			'historique'     => false,
+			'dernier_calcul' => false,
+		];
+		foreach ( $options as $cle => $autocharge ) {
+			$ancienne = get_option( 'bit_' . $cle, null );
+			if ( null !== $ancienne && false !== $ancienne ) {
+				// add_option() n'écrase pas : si la nouvelle clé existe déjà,
+				// c'est elle qui fait foi, pas la relique.
+				add_option( 'csins_' . $cle, $ancienne, '', $autocharge );
+				delete_option( 'bit_' . $cle );
+			}
+		}
+
+		global $wpdb;
+		foreach ( [ '_bit_compagnons' => self::META, '_bit_manuel' => self::META_MANUEL ] as $ancien => $nouveau ) {
+			// Renommage en place plutôt que lecture puis réécriture : le catalogue
+			// peut compter des milliers de fiches, et une seule requête suffit.
+			// Le cache objet est purgé juste après, d'où l'absence de mise en cache ici.
+			// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+			$wpdb->update( $wpdb->postmeta, [ 'meta_key' => $nouveau ], [ 'meta_key' => $ancien ] );
+			// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.SlowDBQuery.slow_db_query_meta_key
+		}
+		// Les métadonnées viennent d'être modifiées dans le dos du cache objet :
+		// sans purge, un site sous Redis servirait indéfiniment les anciennes clés.
+		wp_cache_flush();
+
+		delete_transient( 'bit_analyse' );
+		wp_clear_scheduled_hook( 'bit_recalcul' );
+
+		update_option( 'csins_reprise_bit', 1, '', true );
 	}
 
 	/**
@@ -103,29 +161,50 @@ final class BuyIt_Together {
 	private static function paires_reelles(): array {
 		global $wpdb;
 
-		$jours = (int) apply_filters( 'bit_fenetre_jours', self::FENETRE_JOURS );
+		$jours = (int) apply_filters( 'csins_fenetre_jours', self::FENETRE_JOURS );
 
-		// Une agrégation par commande sur les tables HPOS, sans équivalent dans
-		// l'API WooCommerce ; le résultat est mis en cache en amont, par
-		// analyser() (une heure) et par le cron hebdomadaire qui appelle cette
-		// fonction — la requête elle-même n'a donc pas à l'être une seconde fois.
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		// Une agrégation par commande, sans équivalent dans l'API WooCommerce ; le
+		// résultat est mis en cache en amont, par analyser() (une heure) et par le
+		// cron hebdomadaire qui appelle cette fonction — la requête elle-même n'a
+		// donc pas à l'être une seconde fois.
+		//
+		// WooCommerce range les en-têtes de commande à deux endroits selon le
+		// réglage du site : les tables dédiées (HPOS) ou wp_posts, à l'ancienne.
+		// Les LIGNES de commande, elles, n'ont jamais bougé : les deux jointures
+		// ci-dessous sont communes aux deux cas. Seule la table d'en-tête, la
+		// colonne de date et celle de statut changent — d'où ces trois variables
+		// plutôt que deux requêtes entières qui auraient divergé à la première
+		// retouche.
+		if ( self::stockage_hpos() ) {
+			$table   = $wpdb->prefix . 'wc_orders';
+			$ou      = "cmd.type = 'shop_order' AND cmd.status IN ('wc-completed','wc-processing')";
+			$date    = 'cmd.date_created_gmt';
+		} else {
+			$table   = $wpdb->posts;
+			$ou      = "cmd.post_type = 'shop_order' AND cmd.post_status IN ('wc-completed','wc-processing')";
+			$date    = 'cmd.post_date_gmt';
+		}
+
+		// Les noms de table et de colonne viennent des deux branches ci-dessus,
+		// jamais d'une entrée : rien à échapper là-dedans. Seule la fenêtre en
+		// jours est un paramètre, et elle passe par prepare().
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 		$lignes = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT o.id AS commande, CAST(im.meta_value AS UNSIGNED) AS produit
-				 FROM {$wpdb->prefix}wc_orders o
+				"SELECT cmd.ID AS commande, CAST(im.meta_value AS UNSIGNED) AS produit
+				 FROM {$table} cmd
 				 JOIN {$wpdb->prefix}woocommerce_order_items oi
-				   ON oi.order_id = o.id AND oi.order_item_type = 'line_item'
+				   ON oi.order_id = cmd.ID AND oi.order_item_type = 'line_item'
 				 JOIN {$wpdb->prefix}woocommerce_order_itemmeta im
 				   ON im.order_item_id = oi.order_item_id AND im.meta_key = '_product_id'
-				 WHERE o.type = 'shop_order'
-				   AND o.status IN ('wc-completed','wc-processing')
-				   AND o.date_created_gmt >= (CURDATE() - INTERVAL %d DAY)
+				 WHERE {$ou}
+				   AND {$date} >= (CURDATE() - INTERVAL %d DAY)
 				   AND im.meta_value > 0",
 				$jours
 			),
 			ARRAY_A
 		);
+		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 
 		// Les exclus sont retirés du panier avant l'appariement : une commande
 		// qui n'en gardait qu'un seul article ne produit plus aucune paire.
@@ -185,7 +264,7 @@ final class BuyIt_Together {
 			// disparition réelle des données. Les effacer sur cette seule base
 			// détruirait un travail reconstituable uniquement par un nouveau
 			// calcul réussi.
-			update_option( 'bit_dernier_calcul', [
+			update_option( 'csins_dernier_calcul', [
 				'date'     => current_time( 'mysql' ),
 				'produits' => 0,
 				'paniers'  => (int) $analyse['commandes'],
@@ -194,8 +273,8 @@ final class BuyIt_Together {
 			return 0;
 		}
 
-		$min = (int) apply_filters( 'bit_min_paires', self::MIN_PAIRES );
-		$nb  = (int) apply_filters( 'bit_nb_affiches', self::NB_AFFICHES );
+		$min = (int) apply_filters( 'csins_min_paires', self::MIN_PAIRES );
+		$nb  = (int) apply_filters( 'csins_nb_affiches', self::NB_AFFICHES );
 
 		// On purge d'abord : un produit qui n'a plus d'association ne doit rien garder.
 		// delete_post_meta_by_key() — et non une suppression SQL directe — car le site
@@ -222,7 +301,7 @@ final class BuyIt_Together {
 			}
 		}
 
-		update_option( 'bit_dernier_calcul', [
+		update_option( 'csins_dernier_calcul', [
 			'date'     => current_time( 'mysql' ),
 			'produits' => $enregistres,
 			'paniers'  => (int) $analyse['commandes'],
@@ -256,7 +335,7 @@ final class BuyIt_Together {
 		 * Permet d'ajouter un repli (par exemple le kit d'outils sur les pièces
 		 * structurelles) quand l'historique ne fournit encore aucune association.
 		 */
-		$ids = apply_filters( 'bit_compagnons', $ids, $produit );
+		$ids = apply_filters( 'csins_compagnons', $ids, $produit );
 
 		// Filtré ici aussi, et pas seulement au calcul : un produit exclu ne doit
 		// jamais s'afficher, y compris s'il vient d'une saisie manuelle ou d'une
@@ -302,19 +381,19 @@ final class BuyIt_Together {
 	/** Le bloc statique, affiché en bas de la fiche produit. */
 	private static function afficher_bloc( array $produits ): void {
 		$titre = apply_filters(
-			'bit_titre',
-			__( 'Frequently bought with this part', 'buyit-together' )
+			'csins_titre',
+			__( 'Frequently bought with this part', 'cross-sell-insights' )
 		);
 		?>
-		<section class="bit">
-			<h3 class="bit__titre"><?php echo esc_html( $titre ); ?></h3>
-			<ul class="bit__liste products">
+		<section class="csins">
+			<h3 class="csins__titre"><?php echo esc_html( $titre ); ?></h3>
+			<ul class="csins__liste products">
 				<?php foreach ( $produits as $p ) : ?>
-					<li class="bit__item">
-						<a class="bit__lien" href="<?php echo esc_url( $p->get_permalink() ); ?>">
+					<li class="csins__item">
+						<a class="csins__lien" href="<?php echo esc_url( $p->get_permalink() ); ?>">
 							<?php echo wp_kses_post( $p->get_image( 'woocommerce_thumbnail' ) ); ?>
-							<span class="bit__nom"><?php echo esc_html( $p->get_name() ); ?></span>
-							<span class="bit__prix"><?php echo wp_kses_post( $p->get_price_html() ); ?></span>
+							<span class="csins__nom"><?php echo esc_html( $p->get_name() ); ?></span>
+							<span class="csins__prix"><?php echo wp_kses_post( $p->get_price_html() ); ?></span>
 						</a>
 					</li>
 				<?php endforeach; ?>
@@ -323,20 +402,20 @@ final class BuyIt_Together {
 		<style>
 			/* Peu d'air au-dessus : le bloc suit le contenu de la fiche et n'a pas
 			   à s'en détacher. On en garde en dessous, avant les apparentés. */
-			.bit { margin: 1.2em 0 2.5em; clear: both; }
-			.bit__titre { font-size: 1.1em; margin: 0 0 1em; }
-			.bit__liste { display: grid; gap: 1.25em; list-style: none; margin: 0; padding: 0;
+			.csins { margin: 1.2em 0 2.5em; clear: both; }
+			.csins__titre { font-size: 1.1em; margin: 0 0 1em; }
+			.csins__liste { display: grid; gap: 1.25em; list-style: none; margin: 0; padding: 0;
 				grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
-			.bit__item { margin: 0; }
-			.bit__lien { display: block; text-decoration: none; color: inherit;
+			.csins__item { margin: 0; }
+			.csins__lien { display: block; text-decoration: none; color: inherit;
 				border: 1px solid rgba(0,0,0,.08); border-radius: 6px; overflow: hidden;
 				transition: border-color .15s ease, transform .15s ease; }
-			.bit__lien:hover, .bit__lien:focus-visible {
+			.csins__lien:hover, .csins__lien:focus-visible {
 				border-color: rgba(0,0,0,.22); transform: translateY(-2px); }
-			.bit__lien img { display: block; width: 100%; height: auto; }
-			.bit__nom { display: block; padding: .7em .8em 0; font-size: .88em; line-height: 1.35; }
-			.bit__prix { display: block; padding: .35em .8em .8em; font-weight: 600; font-size: .95em; }
-			@media (prefers-reduced-motion: reduce) { .bit__lien { transition: none; } }
+			.csins__lien img { display: block; width: 100%; height: auto; }
+			.csins__nom { display: block; padding: .7em .8em 0; font-size: .88em; line-height: 1.35; }
+			.csins__prix { display: block; padding: .35em .8em .8em; font-weight: 600; font-size: .95em; }
+			@media (prefers-reduced-motion: reduce) { .csins__lien { transition: none; } }
 		</style>
 		<?php
 	}
@@ -352,42 +431,42 @@ final class BuyIt_Together {
 	private static function css_modal(): string {
 		ob_start();
 		?>
-			.bit-modal { border: 0; padding: 0; max-width: 680px; width: calc(100% - 2em);
-				border-radius: var(--bit-rayon, 14px); background: var(--bit-fond, #fff); color: var(--bit-texte, #1d2327);
+			.csins-modal { border: 0; padding: 0; max-width: 680px; width: calc(100% - 2em);
+				border-radius: var(--csins-rayon, 14px); background: var(--csins-fond, #fff); color: var(--csins-texte, #1d2327);
 				box-shadow: 0 24px 60px -16px rgba(0,0,0,.35), 0 4px 18px rgba(0,0,0,.14);
 				opacity: 1; transform: none;
 				transition: opacity 180ms ease-out, transform 180ms cubic-bezier(.23,1,.32,1); }
-			@starting-style { .bit-modal[open] { opacity: 0; transform: scale(.96) translateY(8px); } }
-			.bit-modal::backdrop { background: rgba(12,12,16,.55); backdrop-filter: blur(2px); }
-			.bit-modal__panneau { position: relative; padding: 1.6em 1.7em 1.4em; }
-			.bit-modal__fermer { position: absolute; top: .6em; right: .6em; width: 2.2em; height: 2.2em;
+			@starting-style { .csins-modal[open] { opacity: 0; transform: scale(.96) translateY(8px); } }
+			.csins-modal::backdrop { background: rgba(12,12,16,.55); backdrop-filter: blur(2px); }
+			.csins-modal__panneau { position: relative; padding: 1.6em 1.7em 1.4em; }
+			.csins-modal__fermer { position: absolute; top: .6em; right: .6em; width: 2.2em; height: 2.2em;
 				display: flex; align-items: center; justify-content: center; border: 0; border-radius: 50%;
 				background: transparent; font-size: 1.3em; line-height: 1; cursor: pointer; color: inherit;
 				opacity: .55; transition: background-color 140ms ease, opacity 140ms ease; }
-			.bit-modal__fermer:hover { opacity: 1; background: color-mix(in srgb, var(--bit-texte, #1d2327) 8%, transparent); }
-			.bit-modal__ajoute { display: flex; align-items: center; flex-wrap: wrap; gap: .55em;
+			.csins-modal__fermer:hover { opacity: 1; background: color-mix(in srgb, var(--csins-texte, #1d2327) 8%, transparent); }
+			.csins-modal__ajoute { display: flex; align-items: center; flex-wrap: wrap; gap: .55em;
 				margin: 0 0 1em; padding-right: 2.2em; font-weight: 600; }
-			.bit-modal__coche { display: inline-flex; align-items: center; justify-content: center;
-				width: 1.5em; height: 1.5em; border-radius: 50%; background: var(--bit-accent, #1d2327); color: #fff;
+			.csins-modal__coche { display: inline-flex; align-items: center; justify-content: center;
+				width: 1.5em; height: 1.5em; border-radius: 50%; background: var(--csins-accent, #1d2327); color: #fff;
 				font-size: .72em; flex: 0 0 auto; }
-			.bit-modal__compte { flex-basis: 100%; font-weight: 400; opacity: .65; font-size: .92em; }
-			.bit-modal__titre { font-size: 1em; margin: 0 0 .8em; }
+			.csins-modal__compte { flex-basis: 100%; font-weight: 400; opacity: .65; font-size: .92em; }
+			.csins-modal__titre { font-size: 1em; margin: 0 0 .8em; }
 			/* Ni sur la liste ni sur la fenêtre : aucun défilement interne. Les
 			   vignettes fixes et le format compact ci-dessous existent pour que le
 			   contenu tienne réellement, plutôt que de masquer le débordement
 			   derrière une barre de défilement. */
-			.bit-modal__liste { list-style: none; margin: 0 0 1.1em; padding: 0; display: grid; gap: .7em; }
-			.bit-modal__liste--ligne { grid-template-columns: 1fr; }
+			.csins-modal__liste { list-style: none; margin: 0 0 1.1em; padding: 0; display: grid; gap: .7em; }
+			.csins-modal__liste--ligne { grid-template-columns: 1fr; }
 			/* Largeur de colonne fixe, pas étirée en 1fr : avec moins de suggestions
 			   qu'il n'y a de place, une colonne en 1fr comble l'espace restant en
 			   s'élargissant, ce qui pousse les cartes à gauche plutôt que de les
 			   centrer. Une largeur fixe + auto-fit (qui élimine les pistes vides) et
 			   justify-content:center centrent la rangée quel que soit son nombre
 			   de cartes. */
-			.bit-modal__liste--colonnes { grid-template-columns: repeat(auto-fit, 140px);
+			.csins-modal__liste--colonnes { grid-template-columns: repeat(auto-fit, 140px);
 				justify-content: center; }
-			.bit-modal__liste--ligne .bit-modal__item { display: flex; align-items: center; gap: .8em; }
-			.bit-modal__liste--ligne .bit-modal__item a:first-child { display: flex; align-items: center;
+			.csins-modal__liste--ligne .csins-modal__item { display: flex; align-items: center; gap: .8em; }
+			.csins-modal__liste--ligne .csins-modal__item a:first-child { display: flex; align-items: center;
 				gap: .8em; flex: 1 1 auto; min-width: 0; text-decoration: none; color: inherit; }
 			/* Colonne = carte compacte : la vignette a une taille FIXE plutôt que de
 			   suivre la largeur de la colonne — une photo produit qui n'est pas
@@ -397,19 +476,19 @@ final class BuyIt_Together {
 			   Le nom est plafonné à deux lignes, hauteur toujours réservée, pour que
 			   les cartes restent de la même taille quel que soit le nom réel ; le
 			   bouton reste collé en bas (margin-top:auto) même sur un nom court. */
-			.bit-modal__liste--colonnes .bit-modal__item { display: flex; flex-direction: column;
+			.csins-modal__liste--colonnes .csins-modal__item { display: flex; flex-direction: column;
 				align-items: center; text-align: center; gap: .4em; }
-			.bit-modal__liste--colonnes .bit-modal__item a:first-child { display: flex; flex-direction: column;
+			.csins-modal__liste--colonnes .csins-modal__item a:first-child { display: flex; flex-direction: column;
 				align-items: center; gap: .4em; flex: 1 1 auto; text-decoration: none; color: inherit; }
-			.bit-modal__liste--colonnes .bit-modal__item img { width: 56px; height: 56px; }
-			.bit-modal__liste--colonnes .bit-modal__nom { display: -webkit-box; -webkit-line-clamp: 2;
+			.csins-modal__liste--colonnes .csins-modal__item img { width: 56px; height: 56px; }
+			.csins-modal__liste--colonnes .csins-modal__nom { display: -webkit-box; -webkit-line-clamp: 2;
 				-webkit-box-orient: vertical; overflow: hidden; min-height: calc(.8em * 1.3 * 2); }
-			.bit-modal__liste--colonnes .bit-modal__ajouter, .bit-modal__liste--colonnes .bit-modal__voir {
+			.csins-modal__liste--colonnes .csins-modal__ajouter, .csins-modal__liste--colonnes .csins-modal__voir {
 				margin-top: auto; }
-			.bit-modal__item img { display: block; object-fit: cover; flex: 0 0 auto; width: 56px; height: 56px;
-				border-radius: max(4px, calc(var(--bit-rayon, 14px) * .5)); }
-			.bit-modal__nom { font-size: .8em; line-height: 1.3; }
-			.bit-modal__prix { display: block; font-size: .8em; font-weight: 700; color: var(--bit-accent, #1d2327);
+			.csins-modal__item img { display: block; object-fit: cover; flex: 0 0 auto; width: 56px; height: 56px;
+				border-radius: max(4px, calc(var(--csins-rayon, 14px) * .5)); }
+			.csins-modal__nom { font-size: .8em; line-height: 1.3; }
+			.csins-modal__prix { display: block; font-size: .8em; font-weight: 700; color: var(--csins-accent, #1d2327);
 				margin-top: .15em; }
 			/* Ces trois-là doivent avoir exactement la même taille, alors qu'ils
 			   ne sont pas du même type : « Ajouter » est un <button>, « Voir le
@@ -420,7 +499,7 @@ final class BuyIt_Together {
 			   détermine la boîte rendue, et rien d'autre : la couleur et le rayon
 			   restent réglables, la taille non. Sans quoi la fenêtre change
 			   d'allure d'un thème à l'autre. */
-			.bit-modal__ajouter, .bit-modal__voir, .bit-modal__pied .button {
+			.csins-modal__ajouter, .csins-modal__voir, .csins-modal__pied .button {
 				box-sizing: border-box !important; flex: 0 0 auto; white-space: nowrap; border: 0; cursor: pointer;
 				text-decoration: none; text-align: center;
 				display: inline-flex !important; align-items: center !important; justify-content: center !important;
@@ -429,19 +508,19 @@ final class BuyIt_Together {
 				padding: .55em .7em !important; min-height: 0 !important; height: auto !important;
 				text-transform: none !important; letter-spacing: normal !important;
 				font-weight: 600 !important; font-family: inherit !important;
-				background: var(--bit-accent, #1d2327); color: #fff;
-				border-radius: max(4px, calc(var(--bit-rayon, 14px) * .55));
+				background: var(--csins-accent, #1d2327); color: #fff;
+				border-radius: max(4px, calc(var(--csins-rayon, 14px) * .55));
 				transition: transform 140ms ease-out, opacity 140ms ease; }
-			.bit-modal__ajouter:hover, .bit-modal__voir:hover, .bit-modal__pied .button:hover { opacity: .88; }
-			.bit-modal__ajouter:active, .bit-modal__voir:active, .bit-modal__pied .button:active { transform: scale(.96); }
-			.bit-modal__ajouter[disabled] { opacity: .55; cursor: default; transform: none; }
-			.bit-modal__pied { display: flex; gap: 1em; align-items: center; justify-content: center; flex-wrap: wrap;
-				padding-top: 1em; border-top: 1px solid color-mix(in srgb, var(--bit-texte, #1d2327) 12%, transparent); }
-			.bit-modal__continuer { background: none; border: 0; text-decoration: underline; cursor: pointer;
+			.csins-modal__ajouter:hover, .csins-modal__voir:hover, .csins-modal__pied .button:hover { opacity: .88; }
+			.csins-modal__ajouter:active, .csins-modal__voir:active, .csins-modal__pied .button:active { transform: scale(.96); }
+			.csins-modal__ajouter[disabled] { opacity: .55; cursor: default; transform: none; }
+			.csins-modal__pied { display: flex; gap: 1em; align-items: center; justify-content: center; flex-wrap: wrap;
+				padding-top: 1em; border-top: 1px solid color-mix(in srgb, var(--csins-texte, #1d2327) 12%, transparent); }
+			.csins-modal__continuer { background: none; border: 0; text-decoration: underline; cursor: pointer;
 				color: inherit; font-size: .9em; padding: 0; opacity: .75; }
-			.bit-modal__continuer:hover { opacity: 1; }
-			@media (prefers-reduced-motion: reduce) { .bit-modal { transition: none; } }
-			.bit-avertir { position: fixed; bottom: 1.2em; right: 1.2em; left: auto; max-width: 320px;
+			.csins-modal__continuer:hover { opacity: 1; }
+			@media (prefers-reduced-motion: reduce) { .csins-modal { transition: none; } }
+			.csins-avertir { position: fixed; bottom: 1.2em; right: 1.2em; left: auto; max-width: 320px;
 				background: #d63638; color: #fff; padding: .8em 1.1em; border-radius: 6px;
 				font-size: .9em; box-shadow: 0 4px 14px rgba(0,0,0,.2); z-index: 100000; }
 		<?php
@@ -472,7 +551,7 @@ final class BuyIt_Together {
 		// Plafonné ici, pas dans suggestions_pour() : le bloc de fiche peut se
 		// permettre une liste plus longue (il fait simplement grandir la page),
 		// la fenêtre non — elle n'a ni la hauteur ni le défilement pour ça.
-		$produits = array_slice( $produits, 0, (int) apply_filters( 'bit_nb_modal', self::NB_MODAL ) );
+		$produits = array_slice( $produits, 0, (int) apply_filters( 'csins_nb_modal', self::NB_MODAL ) );
 
 		$style = self::modal_style();
 
@@ -480,63 +559,63 @@ final class BuyIt_Together {
 		// fenêtre part sans elles et un script les déduit des couleurs déjà
 		// appliquées par le thème sur cette page — le bouton d'ajout réel dit
 		// mieux que n'importe quel réglage à quoi ressemble « la couleur du site ».
-		$vars = sprintf( '--bit-rayon:%dpx;', $style['rayon'] );
+		$vars = sprintf( '--csins-rayon:%dpx;', $style['rayon'] );
 		if ( $style['couleurs_personnalisees'] ) {
 			$vars .= sprintf(
-				'--bit-accent:%s;--bit-fond:%s;--bit-texte:%s;',
+				'--csins-accent:%s;--csins-fond:%s;--csins-texte:%s;',
 				esc_attr( $style['couleur_accent'] ), esc_attr( $style['couleur_fond'] ), esc_attr( $style['couleur_texte'] )
 			);
 		}
 		?>
-		<dialog id="bit-modal" class="bit-modal" style="<?php echo esc_attr( $vars ); ?>"
+		<dialog id="csins-modal" class="csins-modal" style="<?php echo esc_attr( $vars ); ?>"
 		        data-produit="<?php echo (int) $produit->get_id(); ?>"
 		        data-rest="<?php echo esc_url( rest_url( 'wc/store/v1/' ) ); ?>"
 		        data-panier="<?php echo esc_url( wc_get_cart_url() ); ?>"
 		        <?php echo $style['couleurs_personnalisees'] ? '' : 'data-couleurs-auto="1"'; ?>>
-			<div class="bit-modal__panneau">
-				<button type="button" class="bit-modal__fermer" aria-label="<?php esc_attr_e( 'Close', 'buyit-together' ); ?>">&times;</button>
-				<p class="bit-modal__ajoute">
-					<span class="bit-modal__coche" aria-hidden="true">&#10003;</span>
+			<div class="csins-modal__panneau">
+				<button type="button" class="csins-modal__fermer" aria-label="<?php esc_attr_e( 'Close', 'cross-sell-insights' ); ?>">&times;</button>
+				<p class="csins-modal__ajoute">
+					<span class="csins-modal__coche" aria-hidden="true">&#10003;</span>
 					<?php echo esc_html( $style['message_ajoute'] ); ?>
-					<span id="bit-modal-compte" class="bit-modal__compte"></span>
+					<span id="csins-modal-compte" class="csins-modal__compte"></span>
 				</p>
-				<h3 class="bit-modal__titre">
-					<?php echo esc_html( apply_filters( 'bit_titre', $style['titre'] ) ); ?>
+				<h3 class="csins-modal__titre">
+					<?php echo esc_html( apply_filters( 'csins_titre', $style['titre'] ) ); ?>
 				</h3>
-				<ul class="bit-modal__liste bit-modal__liste--<?php echo esc_attr( $style['disposition'] ); ?>">
+				<ul class="csins-modal__liste csins-modal__liste--<?php echo esc_attr( $style['disposition'] ); ?>">
 					<?php foreach ( $produits as $p ) :
 						// Une variation exige de choisir ses options avant de s'ajouter ;
 						// pas de raccourci fiable ici, on renvoie vers sa fiche à la place.
 						$ajoutable = $p->is_type( 'simple' );
 						?>
-						<li class="bit-modal__item">
+						<li class="csins-modal__item">
 							<a href="<?php echo esc_url( $p->get_permalink() ); ?>">
 								<?php echo wp_kses_post( $p->get_image( 'woocommerce_thumbnail' ) ); ?>
-								<span class="bit-modal__nom"><?php echo esc_html( $p->get_name() ); ?></span>
-								<span class="bit-modal__prix"><?php echo wp_kses_post( $p->get_price_html() ); ?></span>
+								<span class="csins-modal__nom"><?php echo esc_html( $p->get_name() ); ?></span>
+								<span class="csins-modal__prix"><?php echo wp_kses_post( $p->get_price_html() ); ?></span>
 							</a>
 							<?php if ( $ajoutable ) : ?>
-								<button type="button" class="bit-modal__ajouter" data-id="<?php echo (int) $p->get_id(); ?>">
-									<?php esc_html_e( 'Add', 'buyit-together' ); ?>
+								<button type="button" class="csins-modal__ajouter" data-id="<?php echo (int) $p->get_id(); ?>">
+									<?php esc_html_e( 'Add', 'cross-sell-insights' ); ?>
 								</button>
 							<?php else : ?>
-								<a class="bit-modal__voir" href="<?php echo esc_url( $p->get_permalink() ); ?>">
-									<?php esc_html_e( 'View product', 'buyit-together' ); ?>
+								<a class="csins-modal__voir" href="<?php echo esc_url( $p->get_permalink() ); ?>">
+									<?php esc_html_e( 'View product', 'cross-sell-insights' ); ?>
 								</a>
 							<?php endif; ?>
 						</li>
 					<?php endforeach; ?>
 				</ul>
-				<div class="bit-modal__pied">
-					<a class="button" href="<?php echo esc_url( wc_get_cart_url() ); ?>"><?php esc_html_e( 'View cart', 'buyit-together' ); ?></a>
-					<button type="button" class="bit-modal__continuer"><?php esc_html_e( 'Continue shopping', 'buyit-together' ); ?></button>
+				<div class="csins-modal__pied">
+					<a class="button" href="<?php echo esc_url( wc_get_cart_url() ); ?>"><?php esc_html_e( 'View cart', 'cross-sell-insights' ); ?></a>
+					<button type="button" class="csins-modal__continuer"><?php esc_html_e( 'Continue shopping', 'cross-sell-insights' ); ?></button>
 				</div>
 			</div>
 		</dialog>
 		<style><?php echo self::css_modal(); // phpcs:ignore WordPress.Security.EscapeOutput -- static CSS text, no user input ?></style>
 		<script>
 		( function () {
-			var dialogue = document.getElementById( 'bit-modal' );
+			var dialogue = document.getElementById( 'csins-modal' );
 			// Pas de <dialog> côté navigateur (très ancien, ou désactivé) : on ne
 			// touche à rien plutôt que de casser l'ajout au panier normal.
 			if ( ! dialogue || typeof dialogue.showModal !== 'function' ) { return; }
@@ -554,15 +633,15 @@ final class BuyIt_Together {
 					if ( boutonReel ) {
 						var styleBouton = getComputedStyle( boutonReel );
 						if ( ! estTransparente( styleBouton.backgroundColor ) ) {
-							dialogue.style.setProperty( '--bit-accent', styleBouton.backgroundColor );
+							dialogue.style.setProperty( '--csins-accent', styleBouton.backgroundColor );
 						}
 					}
 					var styleCorps = getComputedStyle( document.body );
 					if ( ! estTransparente( styleCorps.backgroundColor ) ) {
-						dialogue.style.setProperty( '--bit-fond', styleCorps.backgroundColor );
+						dialogue.style.setProperty( '--csins-fond', styleCorps.backgroundColor );
 					}
 					if ( styleCorps.color ) {
-						dialogue.style.setProperty( '--bit-texte', styleCorps.color );
+						dialogue.style.setProperty( '--csins-texte', styleCorps.color );
 					}
 				})();
 			}
@@ -581,13 +660,13 @@ final class BuyIt_Together {
 			// différents sur la même entrée ne feraient qu'induire l'outil de
 			// traduction en erreur.
 			/* translators: %d: number of items in the cart */
-			$libelle_panier_un = _n( '%d item in your cart.', '%d items in your cart.', 1, 'buyit-together' );
+			$libelle_panier_un = _n( '%d item in your cart.', '%d items in your cart.', 1, 'cross-sell-insights' );
 			/* translators: %d: number of items in the cart */
-			$libelle_panier_plusieurs = _n( '%d item in your cart.', '%d items in your cart.', 2, 'buyit-together' );
+			$libelle_panier_plusieurs = _n( '%d item in your cart.', '%d items in your cart.', 2, 'cross-sell-insights' );
 			?>
 			var texteUn    = '<?php echo esc_js( $libelle_panier_un ); ?>';
 			var textePlur  = '<?php echo esc_js( $libelle_panier_plusieurs ); ?>';
-			var texteErreur = '<?php echo esc_js( __( 'Could not add to cart. Please try again.', 'buyit-together' ) ); ?>';
+			var texteErreur = '<?php echo esc_js( __( 'Could not add to cart. Please try again.', 'cross-sell-insights' ) ); ?>';
 
 			function nonceCourant() {
 				if ( nonce ) { return Promise.resolve( nonce ); }
@@ -628,11 +707,11 @@ final class BuyIt_Together {
 			// bloquante : celle-ci peut survenir juste avant qu'on rende la main
 			// à WooCommerce, pas question de retarder ça pour un clic sur « OK ».
 			function avertir( message ) {
-				var existant = document.getElementById( 'bit-avertir' );
+				var existant = document.getElementById( 'csins-avertir' );
 				if ( existant ) { existant.remove(); }
 				var el = document.createElement( 'div' );
-				el.id = 'bit-avertir';
-				el.className = 'bit-avertir';
+				el.id = 'csins-avertir';
+				el.className = 'csins-avertir';
 				el.setAttribute( 'role', 'alert' );
 				el.textContent = message;
 				document.body.appendChild( el );
@@ -675,14 +754,14 @@ final class BuyIt_Together {
 				var libelleOrigine = bouton ? ( estInput ? bouton.value : bouton.textContent ) : '';
 				if ( bouton ) {
 					bouton.disabled = true;
-					var enCoursBouton = '<?php echo esc_js( __( 'Adding…', 'buyit-together' ) ); ?>';
+					var enCoursBouton = '<?php echo esc_js( __( 'Adding…', 'cross-sell-insights' ) ); ?>';
 					if ( estInput ) { bouton.value = enCoursBouton; } else { bouton.textContent = enCoursBouton; }
 				}
 
 				ajouter( idAjout, quantite, variation ).then( function ( reponse ) {
 					rafraichirFragments();
 					var n = reponse && reponse.items_count ? reponse.items_count : null;
-					document.getElementById( 'bit-modal-compte' ).textContent = n ? accord( n, texteUn, textePlur ) : '';
+					document.getElementById( 'csins-modal-compte' ).textContent = n ? accord( n, texteUn, textePlur ) : '';
 					dialogue.showModal();
 				} ).catch( function () {
 					// Repli : notre appel a échoué, on laisse WooCommerce faire
@@ -700,14 +779,14 @@ final class BuyIt_Together {
 			}, true );
 
 			// --- Ajout direct depuis une suggestion du modal --------------------
-			dialogue.querySelectorAll( '.bit-modal__ajouter' ).forEach( function ( bouton ) {
+			dialogue.querySelectorAll( '.csins-modal__ajouter' ).forEach( function ( bouton ) {
 				bouton.addEventListener( 'click', function () {
 					bouton.disabled = true;
 					ajouter( bouton.dataset.id, 1, [] ).then( function ( reponse ) {
 						rafraichirFragments();
-						bouton.textContent = '<?php echo esc_js( __( 'Added', 'buyit-together' ) ); ?>';
+						bouton.textContent = '<?php echo esc_js( __( 'Added', 'cross-sell-insights' ) ); ?>';
 						var n = reponse && reponse.items_count ? reponse.items_count : null;
-						if ( n ) { document.getElementById( 'bit-modal-compte' ).textContent = accord( n, texteUn, textePlur ); }
+						if ( n ) { document.getElementById( 'csins-modal-compte' ).textContent = accord( n, texteUn, textePlur ); }
 					} ).catch( function () {
 						bouton.disabled = false;
 						avertir( texteErreur );
@@ -715,10 +794,10 @@ final class BuyIt_Together {
 				} );
 			} );
 
-			dialogue.querySelector( '.bit-modal__fermer' ).addEventListener( 'click', function () { dialogue.close(); } );
-			dialogue.querySelector( '.bit-modal__continuer' ).addEventListener( 'click', function () { dialogue.close(); } );
+			dialogue.querySelector( '.csins-modal__fermer' ).addEventListener( 'click', function () { dialogue.close(); } );
+			dialogue.querySelector( '.csins-modal__continuer' ).addEventListener( 'click', function () { dialogue.close(); } );
 			// Clic sur le fond (::backdrop) : le clic tombe sur <dialog> lui-même,
-			// jamais sur .bit-modal__panneau, puisque le panneau occupe tout
+			// jamais sur .csins-modal__panneau, puisque le panneau occupe tout
 			// l'espace intérieur — c'est ce qui distingue les deux cas.
 			dialogue.addEventListener( 'click', function ( e ) { if ( e.target === dialogue ) { dialogue.close(); } } );
 		} )();
@@ -729,7 +808,7 @@ final class BuyIt_Together {
 
 	/**
 	 * Repli par règles : pour les produits sans historique suffisant, on propose
-	 * les articles définis dans WooCommerce → BuyIt Together.
+	 * les articles définis dans WooCommerce → Cross-Sell Insights.
 	 *
 	 * Une règle cible des étiquettes ou des catégories produit — donc une famille
 	 * de pièces (Nacelle, Châssis…) ou une série de drone. Les associations
@@ -741,7 +820,7 @@ final class BuyIt_Together {
 			return $ids;
 		}
 
-		$max = (int) apply_filters( 'bit_nb_affiches', self::NB_AFFICHES );
+		$max = (int) apply_filters( 'csins_nb_affiches', self::NB_AFFICHES );
 		$pid = $produit->get_id();
 
 		foreach ( $regles as $regle ) {
@@ -783,11 +862,11 @@ final class BuyIt_Together {
 	 * @return int[]
 	 */
 	private static function exclus(): array {
-		$brut = get_option( 'bit_exclus', [] );
+		$brut = get_option( 'csins_exclus', [] );
 		$ids  = is_array( $brut ) ? array_map( 'absint', $brut ) : [];
 
 		/** Permet d'exclure par code, par exemple toute une catégorie. */
-		$ids = apply_filters( 'bit_exclus', $ids );
+		$ids = apply_filters( 'csins_exclus', $ids );
 
 		return array_values( array_unique( array_filter( (array) $ids ) ) );
 	}
@@ -803,11 +882,11 @@ final class BuyIt_Together {
 	 * @return int[]
 	 */
 	private static function non_recommandes(): array {
-		$brut = get_option( 'bit_non_recommandes', [] );
+		$brut = get_option( 'csins_non_recommandes', [] );
 		$ids  = is_array( $brut ) ? array_map( 'absint', $brut ) : [];
 
 		/** Permet d'en retirer par code, par exemple toute une catégorie. */
-		$ids = apply_filters( 'bit_non_recommandes', $ids );
+		$ids = apply_filters( 'csins_non_recommandes', $ids );
 
 		return array_values( array_unique( array_filter( (array) $ids ) ) );
 	}
@@ -828,20 +907,23 @@ final class BuyIt_Together {
 	/**
 	 * Le site range-t-il ses commandes dans les tables HPOS ?
 	 *
-	 * Tout le calcul lit `wp_wc_orders` directement. Sur un site resté au
-	 * stockage classique (commandes dans `wp_posts`), cette table existe mais
-	 * reste vide : la requête aboutit, ne remonte rien, et l'extension conclut
-	 * à tort « pas assez de commandes ». Une réponse fausse et silencieuse est
-	 * pire qu'une absence de réponse — d'où cette détection, qui sert à le dire
-	 * à l'administrateur plutôt qu'à le laisser chercher.
+	 * WooCommerce laisse le choix entre les tables dédiées (HPOS) et le stockage
+	 * classique, où les commandes vivent dans `wp_posts`. Les deux sont pris en
+	 * charge : cette méthode dit seulement à paires_reelles() où regarder. Lire
+	 * la mauvaise table ne renverrait pas d'erreur, seulement zéro commande —
+	 * un résultat faux et silencieux, la pire sorte.
 	 *
-	 * En cas de doute (API WooCommerce absente), on répond « oui » : mieux vaut
-	 * se taire que d'alarmer à tort un site qui fonctionne.
+	 * On interroge WooCommerce plutôt que l'option brute : c'est lui qui
+	 * arbitre, notamment en mode de synchronisation où les deux tables sont
+	 * peuplées mais où une seule fait foi. En cas de doute (API absente, très
+	 * vieille version), on répond « non » et on lit `wp_posts`, qui existe
+	 * partout — quitte à ne rien trouver sur un site HPOS récent, plutôt que de
+	 * viser une table qui, elle, peut ne pas exister du tout.
 	 */
 	private static function stockage_hpos(): bool {
 		$util = '\\Automattic\\WooCommerce\\Utilities\\OrderUtil';
 		if ( ! class_exists( $util ) || ! method_exists( $util, 'custom_orders_table_usage_is_enabled' ) ) {
-			return true;
+			return false;
 		}
 		return (bool) $util::custom_orders_table_usage_is_enabled();
 	}
@@ -854,7 +936,7 @@ final class BuyIt_Together {
 		if ( ! self::store_api_disponible() ) {
 			return 'bloc';
 		}
-		$mode = get_option( 'bit_mode_fiche', 'bloc' );
+		$mode = get_option( 'csins_mode_fiche', 'bloc' );
 		return in_array( $mode, [ 'bloc', 'modal', 'both' ], true ) ? $mode : 'bloc';
 	}
 
@@ -867,8 +949,8 @@ final class BuyIt_Together {
 	 */
 	private static function modal_style(): array {
 		$defaut = [
-			'titre'                 => __( 'Frequently bought with this part', 'buyit-together' ),
-			'message_ajoute'        => __( 'Added to your cart.', 'buyit-together' ),
+			'titre'                 => __( 'Frequently bought with this part', 'cross-sell-insights' ),
+			'message_ajoute'        => __( 'Added to your cart.', 'cross-sell-insights' ),
 			// Sans effet tant que couleurs_personnalisees est faux : ce sont les
 			// couleurs de repli si jamais la détection automatique échouait.
 			'couleur_accent'        => '#1d2327',
@@ -881,7 +963,7 @@ final class BuyIt_Together {
 			'couleurs_personnalisees' => false,
 		];
 
-		$brut  = get_option( 'bit_modal_style', [] );
+		$brut  = get_option( 'csins_modal_style', [] );
 		$brut  = is_array( $brut ) ? $brut : [];
 		$style = array_merge( $defaut, $brut );
 
@@ -902,7 +984,7 @@ final class BuyIt_Together {
 
 	/** Règles enregistrées, nettoyées. */
 	private static function regles(): array {
-		$brut = get_option( 'bit_regles', [] );
+		$brut = get_option( 'csins_regles', [] );
 		if ( ! is_array( $brut ) ) {
 			return [];
 		}
@@ -921,7 +1003,7 @@ final class BuyIt_Together {
 	/** Étiquettes et catégories disponibles, pour le sélecteur de l'admin. */
 	private static function termes_disponibles(): array {
 		$liste = [];
-		foreach ( [ 'product_tag' => __( 'Tag', 'buyit-together' ), 'product_cat' => __( 'Category', 'buyit-together' ) ] as $tx => $label ) {
+		foreach ( [ 'product_tag' => __( 'Tag', 'cross-sell-insights' ), 'product_cat' => __( 'Category', 'cross-sell-insights' ) ] as $tx => $label ) {
 			$termes = get_terms( [ 'taxonomy' => $tx, 'hide_empty' => true ] );
 			if ( is_wp_error( $termes ) ) {
 				continue;
@@ -944,7 +1026,7 @@ final class BuyIt_Together {
 	 * l'historique et n'a pas à être refait à chaque affichage.
 	 */
 	public static function analyser( bool $forcer = false ): array {
-		$cache = get_transient( 'bit_analyse' );
+		$cache = get_transient( 'csins_analyse' );
 		if ( ! $forcer && is_array( $cache ) ) {
 			return $cache;
 		}
@@ -997,7 +1079,7 @@ final class BuyIt_Together {
 		}
 
 		// Associations fortes non configurées.
-		$seuil = (int) apply_filters( 'bit_seuil_reco', 3 );
+		$seuil = (int) apply_filters( 'csins_seuil_reco', 3 );
 		$non_reco = array_flip( self::non_recommandes() );
 		$recos = [];
 		foreach ( $reel as $a => $voisins ) {
@@ -1041,7 +1123,7 @@ final class BuyIt_Together {
 			'paires_tot' => count( $classement ),
 		];
 
-		set_transient( 'bit_analyse', $resultat, HOUR_IN_SECONDS );
+		set_transient( 'csins_analyse', $resultat, HOUR_IN_SECONDS );
 
 		return $resultat;
 	}
@@ -1049,9 +1131,9 @@ final class BuyIt_Together {
 	/** Applique les recommandations cochées aux ventes croisées WooCommerce. */
 	public static function appliquer_recos(): void {
 		if ( ! current_user_can( 'manage_woocommerce' ) ) {
-			wp_die( esc_html__( 'Permission denied.', 'buyit-together' ) );
+			wp_die( esc_html__( 'Permission denied.', 'cross-sell-insights' ) );
 		}
-		check_admin_referer( 'bit_recos' );
+		check_admin_referer( 'csins_recos' );
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- nonce checked above via check_admin_referer(); each element is sanitized on the next lines.
 		$choix = isset( $_POST['reco'] ) ? (array) wp_unslash( $_POST['reco'] ) : [];
@@ -1081,11 +1163,11 @@ final class BuyIt_Together {
 		}
 
 		if ( $sauvegarde ) {
-			self::empiler_sauvegarde( __( 'Recommendations applied', 'buyit-together' ), $sauvegarde );
+			self::empiler_sauvegarde( __( 'Recommendations applied', 'cross-sell-insights' ), $sauvegarde );
 		}
-		delete_transient( 'bit_analyse' );
+		delete_transient( 'csins_analyse' );
 
-		wp_safe_redirect( admin_url( 'admin.php?page=buyit-together&onglet=analyse&recos=' . $appliquees ) );
+		wp_safe_redirect( admin_url( 'admin.php?page=cross-sell-insights&onglet=analyse&recos=' . $appliquees ) );
 		exit;
 	}
 
@@ -1094,10 +1176,10 @@ final class BuyIt_Together {
 	public static function menu(): void {
 		add_submenu_page(
 			'woocommerce',
-			__( 'BuyIt Together', 'buyit-together' ),
-			__( 'BuyIt Together', 'buyit-together' ),
+			__( 'Cross-Sell Insights', 'cross-sell-insights' ),
+			__( 'Cross-Sell Insights', 'cross-sell-insights' ),
 			'manage_woocommerce',
-			'buyit-together',
+			'cross-sell-insights',
 			[ self::class, 'page' ]
 		);
 	}
@@ -1108,21 +1190,21 @@ final class BuyIt_Together {
 		if ( ! in_array( $onglet, [ 'analyse', 'fiche', 'panier', 'gamme', 'editeur', 'reglages' ], true ) ) {
 			$onglet = 'analyse';
 		}
-		$base   = admin_url( 'admin.php?page=buyit-together' );
+		$base   = admin_url( 'admin.php?page=cross-sell-insights' );
 
 		// Sélecteur de produits natif de WooCommerce (recherche AJAX).
 		wp_enqueue_script( 'wc-enhanced-select' );
 		wp_enqueue_style( 'woocommerce_admin_styles' );
 		self::styles();
 		?>
-		<div class="wrap bit-wrap">
-			<h1 class="bit-marque">
-				<svg class="bit-marque__logo" viewBox="0 0 40 40" width="28" height="28" aria-hidden="true" focusable="false">
+		<div class="wrap csins-wrap">
+			<h1 class="csins-marque">
+				<svg class="csins-marque__logo" viewBox="0 0 40 40" width="28" height="28" aria-hidden="true" focusable="false">
 					<circle cx="15.5" cy="20" r="8.5" fill="#2271b1"></circle>
 					<circle cx="24.5" cy="20" r="8.5" fill="#f0a30a"></circle>
 					<path d="M 20,12.05 A 8.5,8.5 0 0 1 20,27.95 A 8.5,8.5 0 0 1 20,12.05 Z" fill="#fff"></path>
 				</svg>
-				<?php esc_html_e( 'BuyIt Together', 'buyit-together' ); ?>
+				<?php esc_html_e( 'Cross-Sell Insights', 'cross-sell-insights' ); ?>
 			</h1>
 
 			<?php self::notices(); ?>
@@ -1130,27 +1212,27 @@ final class BuyIt_Together {
 			<nav class="nav-tab-wrapper wp-clearfix">
 				<a href="<?php echo esc_url( $base . '&onglet=analyse' ); ?>"
 				   class="nav-tab <?php echo 'analyse' === $onglet ? 'nav-tab-active' : ''; ?>">
-					<?php esc_html_e( 'Analysis', 'buyit-together' ); ?>
+					<?php esc_html_e( 'Analysis', 'cross-sell-insights' ); ?>
 				</a>
 				<a href="<?php echo esc_url( $base . '&onglet=fiche' ); ?>"
 				   class="nav-tab <?php echo 'fiche' === $onglet ? 'nav-tab-active' : ''; ?>">
-					<?php esc_html_e( 'Product page suggestions', 'buyit-together' ); ?>
+					<?php esc_html_e( 'Product page suggestions', 'cross-sell-insights' ); ?>
 				</a>
 				<a href="<?php echo esc_url( $base . '&onglet=panier' ); ?>"
 				   class="nav-tab <?php echo 'panier' === $onglet ? 'nav-tab-active' : ''; ?>">
-					<?php esc_html_e( 'Cart cross-sells', 'buyit-together' ); ?>
+					<?php esc_html_e( 'Cart cross-sells', 'cross-sell-insights' ); ?>
 				</a>
 				<a href="<?php echo esc_url( $base . '&onglet=gamme' ); ?>"
 				   class="nav-tab <?php echo 'gamme' === $onglet ? 'nav-tab-active' : ''; ?>">
-					<?php esc_html_e( 'Upsells', 'buyit-together' ); ?>
+					<?php esc_html_e( 'Upsells', 'cross-sell-insights' ); ?>
 				</a>
 				<a href="<?php echo esc_url( $base . '&onglet=editeur' ); ?>"
 				   class="nav-tab <?php echo 'editeur' === $onglet ? 'nav-tab-active' : ''; ?>">
-					<?php esc_html_e( 'Category editor', 'buyit-together' ); ?>
+					<?php esc_html_e( 'Category editor', 'cross-sell-insights' ); ?>
 				</a>
 				<a href="<?php echo esc_url( $base . '&onglet=reglages' ); ?>"
 				   class="nav-tab <?php echo 'reglages' === $onglet ? 'nav-tab-active' : ''; ?>">
-					<?php esc_html_e( 'Settings', 'buyit-together' ); ?>
+					<?php esc_html_e( 'Settings', 'cross-sell-insights' ); ?>
 				</a>
 			</nav>
 
@@ -1179,11 +1261,11 @@ final class BuyIt_Together {
 	private static function lien_produit( int $id, string $depuis = '' ): string {
 		$titre = get_the_title( $id );
 		if ( '' === $titre ) {
-			return '<em>' . esc_html__( '(deleted product)', 'buyit-together' ) . '</em>';
+			return '<em>' . esc_html__( '(deleted product)', 'cross-sell-insights' ) . '</em>';
 		}
 
 		$args = [
-			'page'     => 'buyit-together',
+			'page'     => 'cross-sell-insights',
 			'onglet'   => 'editeur',
 			'produits' => [ $id ],
 		];
@@ -1192,9 +1274,9 @@ final class BuyIt_Together {
 		}
 
 		return sprintf(
-			'<a class="bit-lien" href="%s" title="%s">%s</a>',
+			'<a class="csins-lien" href="%s" title="%s">%s</a>',
 			esc_url( add_query_arg( $args, admin_url( 'admin.php' ) ) ),
-			esc_attr__( 'Edit its suggestions and cross-sells', 'buyit-together' ),
+			esc_attr__( 'Edit its suggestions and cross-sells', 'cross-sell-insights' ),
 			esc_html( $titre )
 		);
 	}
@@ -1217,8 +1299,8 @@ final class BuyIt_Together {
 			$n = absint( $_GET['recos'] );
 			$messages[] = $n
 				/* translators: %d: number of recommendations applied */
-				? sprintf( _n( '%d recommendation applied to your cross-sells.', '%d recommendations applied to your cross-sells.', $n, 'buyit-together' ), $n )
-				: __( 'Nothing to apply: the selected pairs were already configured.', 'buyit-together' );
+				? sprintf( _n( '%d recommendation applied to your cross-sells.', '%d recommendations applied to your cross-sells.', $n, 'cross-sell-insights' ), $n )
+				: __( 'Nothing to apply: the selected pairs were already configured.', 'cross-sell-insights' );
 		}
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only navigation parameter, no state change.
@@ -1226,32 +1308,32 @@ final class BuyIt_Together {
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only navigation parameter, no state change.
 			$n = absint( $_GET['edites'] );
 			/* translators: %d: number of products updated */
-			$messages[] = sprintf( _n( '%d product updated.', '%d products updated.', $n, 'buyit-together' ), $n );
+			$messages[] = sprintf( _n( '%d product updated.', '%d products updated.', $n, 'cross-sell-insights' ), $n );
 		}
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only navigation parameter, no state change.
 		if ( isset( $_GET['exclus'] ) ) {
-			$messages[] = __( 'Exclusions saved.', 'buyit-together' );
+			$messages[] = __( 'Exclusions saved.', 'cross-sell-insights' );
 		}
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only navigation parameter, no state change.
 		if ( isset( $_GET['muets'] ) ) {
-			$messages[] = __( 'Saved. These product pages are out of the recommendations table.', 'buyit-together' );
+			$messages[] = __( 'Saved. These product pages are out of the recommendations table.', 'cross-sell-insights' );
 		}
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only navigation parameter, no state change.
 		if ( isset( $_GET['regles'] ) ) {
-			$messages[] = __( 'Rules saved.', 'buyit-together' );
+			$messages[] = __( 'Rules saved.', 'cross-sell-insights' );
 		}
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only navigation parameter, no state change.
 		if ( isset( $_GET['mode'] ) ) {
-			$messages[] = __( 'Saved.', 'buyit-together' );
+			$messages[] = __( 'Saved.', 'cross-sell-insights' );
 		}
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only navigation parameter, no state change.
 		if ( isset( $_GET['style'] ) ) {
-			$messages[] = __( 'Window appearance saved.', 'buyit-together' );
+			$messages[] = __( 'Window appearance saved.', 'cross-sell-insights' );
 		}
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only navigation parameter, no state change.
@@ -1259,13 +1341,13 @@ final class BuyIt_Together {
 			// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only navigation parameter, no state change.
 			$valeur = sanitize_text_field( wp_unslash( $_GET['masse'] ) );
 			if ( 'vide' === $valeur ) {
-				$messages[] = __( 'Choose at least one cross-sell product to add, and a category, tag or product to apply it to.', 'buyit-together' );
+				$messages[] = __( 'Choose at least one cross-sell product to add, and a category, tag or product to apply it to.', 'cross-sell-insights' );
 			} elseif ( '0' === $valeur ) {
-				$messages[] = __( 'No product matched your selection.', 'buyit-together' );
+				$messages[] = __( 'No product matched your selection.', 'cross-sell-insights' );
 			} else {
 				$n = absint( $valeur );
 				/* translators: %d: number of products updated */
-				$messages[] = sprintf( _n( '%d product updated.', '%d products updated.', $n, 'buyit-together' ), $n );
+				$messages[] = sprintf( _n( '%d product updated.', '%d products updated.', $n, 'cross-sell-insights' ), $n );
 			}
 		}
 
@@ -1275,30 +1357,19 @@ final class BuyIt_Together {
 			$n = absint( $_GET['annule'] );
 			$messages[] = $n
 				/* translators: %d: number of products restored */
-				? sprintf( _n( '%d product restored to its previous cross-sells.', '%d products restored to their previous cross-sells.', $n, 'buyit-together' ), $n )
-				: __( 'Nothing to undo.', 'buyit-together' );
+				? sprintf( _n( '%d product restored to its previous cross-sells.', '%d products restored to their previous cross-sells.', $n, 'cross-sell-insights' ), $n )
+				: __( 'Nothing to undo.', 'cross-sell-insights' );
 		}
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only navigation parameter, no state change.
 		if ( isset( $_GET['recalcul'] ) ) {
-			$messages[] = __( 'Calculation refreshed — see the numbers below.', 'buyit-together' );
+			$messages[] = __( 'Calculation refreshed — see the numbers below.', 'cross-sell-insights' );
 		}
 
 		foreach ( $messages as $message ) {
 			printf(
 				'<div class="notice notice-success is-dismissible"><p>%s</p></div>',
 				esc_html( $message )
-			);
-		}
-
-		// Averti en dernier, et non masquable : contrairement aux messages
-		// ci-dessus qui confirment une action, celui-ci explique pourquoi tous
-		// les chiffres de l'écran valent zéro. Le masquer reviendrait à laisser
-		// l'administrateur devant un diagnostic faux sans explication.
-		if ( ! self::stockage_hpos() ) {
-			printf(
-				'<div class="notice notice-warning"><p>%s</p></div>',
-				esc_html__( 'This site still stores its orders the classic way. BuyIt Together reads the newer high-performance order tables, which are empty here — so the analysis below finds no orders and no associations, however many sales you have. Switching WooCommerce to high-performance order storage (WooCommerce → Settings → Advanced → Features) makes the numbers real.', 'buyit-together' )
 			);
 		}
 	}
@@ -1315,7 +1386,7 @@ final class BuyIt_Together {
 	private static function styles(): void {
 		?>
 		<style>
-		.bit-wrap { --ae-encre:#1d2327; --ae-encre-2:#50575e; --ae-encre-3:#787c82;
+		.csins-wrap { --ae-encre:#1d2327; --ae-encre-2:#50575e; --ae-encre-3:#787c82;
 			--ae-bord:#dcdcde; --ae-fond:#fff; --ae-fond-2:#f6f7f7; --ae-accent:#2271b1;
 			--ae-bon:#0ca30c; --ae-attention:#fab219; --ae-serieux:#ec835a; --ae-critique:#d03b3b;
 			--ae-ressort:cubic-bezier(.23,1,.32,1); }
@@ -1324,85 +1395,85 @@ final class BuyIt_Together {
 		   Même dessin que l'icône du dépôt : deux produits, l'intersection est
 		   ce qui s'achète ensemble. Le retrouver ici referme la boucle entre
 		   la fiche du dépôt et l'écran qu'on utilise vraiment. */
-		.bit-marque { display:flex; align-items:center; gap:10px; }
-		.bit-marque__logo { flex:0 0 auto; }
+		.csins-marque { display:flex; align-items:center; gap:10px; }
+		.csins-marque__logo { flex:0 0 auto; }
 
 		/* --- Retour tactile : les boutons et onglets répondent à la pression,
 		   pas seulement au survol — l'interface montre qu'elle a entendu. */
-		.bit-wrap .button, .bit-wrap .nav-tab, .bit-tuile {
+		.csins-wrap .button, .csins-wrap .nav-tab, .csins-tuile {
 			transition:transform 140ms var(--ae-ressort), border-color 140ms ease, background-color 140ms ease; }
-		.bit-wrap .button:active, .bit-wrap .nav-tab:active { transform:scale(.97); }
+		.csins-wrap .button:active, .csins-wrap .nav-tab:active { transform:scale(.97); }
 		@media (prefers-reduced-motion:reduce) {
-			.bit-wrap .button, .bit-wrap .nav-tab, .bit-tuile, .bit-jauge__part { transition:none !important; }
+			.csins-wrap .button, .csins-wrap .nav-tab, .csins-tuile, .csins-jauge__part { transition:none !important; }
 		}
 
 		/* --- Bandeau de tête --------------------------------------------- */
-		.bit-tete { display:flex; flex-wrap:wrap; gap:24px; align-items:flex-start;
+		.csins-tete { display:flex; flex-wrap:wrap; gap:24px; align-items:flex-start;
 			background:var(--ae-fond); border:1px solid var(--ae-bord); border-radius:6px;
 			padding:22px 24px; margin:16px 0 24px; }
-		.bit-heros { flex:0 0 auto; min-width:190px; }
-		.bit-heros__valeur { font-size:52px; line-height:1; font-weight:600; color:var(--ae-encre);
+		.csins-heros { flex:0 0 auto; min-width:190px; }
+		.csins-heros__valeur { font-size:52px; line-height:1; font-weight:600; color:var(--ae-encre);
 			letter-spacing:-.02em; }
-		.bit-heros__legende { margin-top:6px; font-size:13px; color:var(--ae-encre-2); }
+		.csins-heros__legende { margin-top:6px; font-size:13px; color:var(--ae-encre-2); }
 
 		/* --- Jauge : le remplissage porte la sévérité, la piste est le même ton, éclairci */
-		.bit-jauge { flex:1 1 260px; min-width:240px; align-self:center; }
-		.bit-jauge__piste { height:10px; border-radius:5px; overflow:hidden;
+		.csins-jauge { flex:1 1 260px; min-width:240px; align-self:center; }
+		.csins-jauge__piste { height:10px; border-radius:5px; overflow:hidden;
 			background:color-mix(in srgb, var(--ae-teinte) 18%, #fff); }
-		.bit-jauge__part { height:100%; background:var(--ae-teinte); border-radius:5px 0 0 5px;
+		.csins-jauge__part { height:100%; background:var(--ae-teinte); border-radius:5px 0 0 5px;
 			width:0; transition:width 700ms var(--ae-ressort); }
-		.bit-jauge__note { margin-top:8px; font-size:12px; color:var(--ae-encre-3); }
+		.csins-jauge__note { margin-top:8px; font-size:12px; color:var(--ae-encre-3); }
 
 		/* --- Pastille d'état : couleur + icône + libellé ------------------ */
-		.bit-etat { display:inline-flex; align-items:center; gap:7px; margin-top:10px;
+		.csins-etat { display:inline-flex; align-items:center; gap:7px; margin-top:10px;
 			font-size:13px; font-weight:600; color:var(--ae-encre); }
-		.bit-etat__point { width:9px; height:9px; border-radius:50%; background:var(--ae-teinte);
+		.csins-etat__point { width:9px; height:9px; border-radius:50%; background:var(--ae-teinte);
 			box-shadow:0 0 0 3px color-mix(in srgb, var(--ae-teinte) 22%, transparent); flex:0 0 auto; }
 
 		/* --- Tuiles ------------------------------------------------------- */
-		.bit-tuiles { display:grid; gap:12px; margin:0 0 24px;
+		.csins-tuiles { display:grid; gap:12px; margin:0 0 24px;
 			grid-template-columns:repeat(auto-fit,minmax(168px,1fr)); }
-		.bit-tuile { background:var(--ae-fond); border:1px solid var(--ae-bord);
+		.csins-tuile { background:var(--ae-fond); border:1px solid var(--ae-bord);
 			border-radius:6px; padding:14px 16px; display:block; text-decoration:none; }
-		.bit-tuile__valeur { font-size:26px; font-weight:600; line-height:1.15; color:var(--ae-encre); }
-		.bit-tuile__label { margin-top:3px; font-size:12px; color:var(--ae-encre-2); }
+		.csins-tuile__valeur { font-size:26px; font-weight:600; line-height:1.15; color:var(--ae-encre); }
+		.csins-tuile__label { margin-top:3px; font-size:12px; color:var(--ae-encre-2); }
 		/* Tuile = raccourci vers la section qui en dit plus, pas juste un chiffre. */
-		a.bit-tuile:hover { border-color:var(--ae-accent); transform:translateY(-1px); }
-		a.bit-tuile:active { transform:scale(.98) translateY(0); }
-		@media (prefers-reduced-motion:reduce) { a.bit-tuile:hover { transform:none; } }
+		a.csins-tuile:hover { border-color:var(--ae-accent); transform:translateY(-1px); }
+		a.csins-tuile:active { transform:scale(.98) translateY(0); }
+		@media (prefers-reduced-motion:reduce) { a.csins-tuile:hover { transform:none; } }
 
 		/* --- Sections ----------------------------------------------------- */
-		.bit-section { background:var(--ae-fond); border:1px solid var(--ae-bord);
+		.csins-section { background:var(--ae-fond); border:1px solid var(--ae-bord);
 			border-radius:6px; padding:20px 24px; margin:0 0 20px; }
-		.bit-section h3 { font-size:13px; margin:26px 0 4px; color:var(--ae-encre); }
-		.bit-section > h2:first-child { margin-top:0; padding-bottom:12px;
+		.csins-section h3 { font-size:13px; margin:26px 0 4px; color:var(--ae-encre); }
+		.csins-section > h2:first-child { margin-top:0; padding-bottom:12px;
 			border-bottom:1px solid var(--ae-bord); font-size:15px; }
-		.bit-section .description { color:var(--ae-encre-3); }
-		.bit-intro { color:var(--ae-encre-2); font-size:13px; margin:14px 0 20px; max-width:62em; }
+		.csins-section .description { color:var(--ae-encre-3); }
+		.csins-intro { color:var(--ae-encre-2); font-size:13px; margin:14px 0 20px; max-width:62em; }
 
 		/* --- Tableaux ------------------------------------------------------ */
-		.bit-section .widefat { border-radius:4px; }
-		.bit-section .widefat thead th { font-size:12px; text-transform:uppercase;
+		.csins-section .widefat { border-radius:4px; }
+		.csins-section .widefat thead th { font-size:12px; text-transform:uppercase;
 			letter-spacing:.03em; color:var(--ae-encre-3); }
-		.bit-num { font-variant-numeric:tabular-nums; white-space:nowrap; }
-		.bit-paire { color:var(--ae-encre-3); padding:0 6px; }
+		.csins-num { font-variant-numeric:tabular-nums; white-space:nowrap; }
+		.csins-paire { color:var(--ae-encre-3); padding:0 6px; }
 
 		/* --- Éditeur de catégorie ------------------------------------------ */
-		.bit-groupe { background:var(--ae-fond); border:1px solid var(--ae-bord);
+		.csins-groupe { background:var(--ae-fond); border:1px solid var(--ae-bord);
 			border-radius:6px; padding:16px 18px; margin:0 0 16px;
 			/* Reste atteignable en bas d'une longue catégorie plutôt que
 			   forcer un aller-retour en haut de page pour l'appliquer. */
 			position:sticky; top:calc(var(--wp-admin--admin-bar--height, 32px) + 12px); z-index:10; }
-		.bit-groupe .description { color:var(--ae-encre-3); }
-		.bit-defile { border:1px solid var(--ae-bord); border-radius:6px;
+		.csins-groupe .description { color:var(--ae-encre-3); }
+		.csins-defile { border:1px solid var(--ae-bord); border-radius:6px;
 			background:var(--ae-fond); }
-		.bit-defile .widefat { border:0; }
-		.bit-wrap .nav-tab-wrapper { margin-bottom:0; }
-		.bit-retour { margin:14px 0 0; font-size:13px; }
-		.bit-lien { text-decoration:none; border-bottom:1px solid transparent; }
-		.bit-lien:hover, .bit-lien:focus-visible { border-bottom-color:currentColor; }
-		.bit-actions { display:block; font-size:12px; }
-		.bit-actions a + a { margin-left:.5em; padding-left:.6em;
+		.csins-defile .widefat { border:0; }
+		.csins-wrap .nav-tab-wrapper { margin-bottom:0; }
+		.csins-retour { margin:14px 0 0; font-size:13px; }
+		.csins-lien { text-decoration:none; border-bottom:1px solid transparent; }
+		.csins-lien:hover, .csins-lien:focus-visible { border-bottom-color:currentColor; }
+		.csins-actions { display:block; font-size:12px; }
+		.csins-actions a + a { margin-left:.5em; padding-left:.6em;
 			border-left:1px solid var(--ae-bord); }
 		</style>
 		<?php
@@ -1416,7 +1487,7 @@ final class BuyIt_Together {
 	 * achetés ensemble. Les autres onglets ne servent qu'à configurer.
 	 */
 	private static function onglet_analyse(): void {
-		$info = get_option( 'bit_dernier_calcul', [] );
+		$info = get_option( 'csins_dernier_calcul', [] );
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only navigation parameter, no state change.
 		// Le lien « Relancer l'analyse » porte un nonce : il déclenche une
 		// agrégation sur tout l'historique des commandes, en contournant le cache
@@ -1427,68 +1498,68 @@ final class BuyIt_Together {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- nonce vérifié juste en dessous ; son absence ne fait que retomber sur le cache.
 		$forcer = isset( $_GET['analyser'] )
 			&& isset( $_GET['_wpnonce'] )
-			&& wp_verify_nonce( sanitize_key( wp_unslash( $_GET['_wpnonce'] ) ), 'bit_analyser' );
+			&& wp_verify_nonce( sanitize_key( wp_unslash( $_GET['_wpnonce'] ) ), 'csins_analyser' );
 		$a    = self::analyser( $forcer );
 		$taux = $a['total'] ? round( $a['confirmees'] * 100 / $a['total'] ) : 0;
 
 		// Seuils et vocabulaire de l'état : la couleur ne dit rien seule.
 		if ( ! $a['total'] ) {
 			$teinte = 'var(--ae-encre-3)';
-			$etat   = __( 'No cross-sells configured', 'buyit-together' );
+			$etat   = __( 'No cross-sells configured', 'cross-sell-insights' );
 		} elseif ( $taux < 15 ) {
 			$teinte = 'var(--ae-critique)';
-			$etat   = __( 'Configuration unrelated to your sales', 'buyit-together' );
+			$etat   = __( 'Configuration unrelated to your sales', 'cross-sell-insights' );
 		} elseif ( $taux < 40 ) {
 			$teinte = 'var(--ae-serieux)';
-			$etat   = __( 'Weak match', 'buyit-together' );
+			$etat   = __( 'Weak match', 'cross-sell-insights' );
 		} elseif ( $taux < 70 ) {
 			$teinte = 'var(--ae-attention)';
-			$etat   = __( 'Partial match', 'buyit-together' );
+			$etat   = __( 'Partial match', 'cross-sell-insights' );
 		} else {
 			$teinte = 'var(--ae-bon)';
-			$etat   = __( 'Configuration matches your sales', 'buyit-together' );
+			$etat   = __( 'Configuration matches your sales', 'cross-sell-insights' );
 		}
 		?>
-		<p class="bit-intro">
-			<?php esc_html_e( "What your sales say. Nothing to configure here: the suggested corrections can be applied, but configuration happens in the other tabs.", 'buyit-together' ); ?>
+		<p class="csins-intro">
+			<?php esc_html_e( "What your sales say. Nothing to configure here: the suggested corrections can be applied, but configuration happens in the other tabs.", 'cross-sell-insights' ); ?>
 		</p>
 
-		<div class="bit-tete" style="--ae-teinte: <?php echo esc_attr( $teinte ); ?>">
-			<div class="bit-heros">
-				<div class="bit-heros__valeur"><?php echo esc_html( $taux ); ?>&nbsp;%</div>
-				<div class="bit-heros__legende"><?php esc_html_e( 'of your cross-sells match a real purchase', 'buyit-together' ); ?></div>
-				<div class="bit-etat">
-					<span class="bit-etat__point" aria-hidden="true"></span>
+		<div class="csins-tete" style="--ae-teinte: <?php echo esc_attr( $teinte ); ?>">
+			<div class="csins-heros">
+				<div class="csins-heros__valeur"><?php echo esc_html( $taux ); ?>&nbsp;%</div>
+				<div class="csins-heros__legende"><?php esc_html_e( 'of your cross-sells match a real purchase', 'cross-sell-insights' ); ?></div>
+				<div class="csins-etat">
+					<span class="csins-etat__point" aria-hidden="true"></span>
 					<span><?php echo esc_html( $etat ); ?></span>
 				</div>
 			</div>
-			<div class="bit-jauge">
-				<div class="bit-jauge__piste">
+			<div class="csins-jauge">
+				<div class="csins-jauge__piste">
 					<?php
 					// Largeur posée à 0 dans le balisage ; un script la porte à sa
 					// valeur juste après, pour que le remplissage se lise comme la
 					// réponse à une question plutôt qu'un simple fait affiché.
 					$largeur_cible = max( 1, min( 100, $taux ) );
 					?>
-					<div class="bit-jauge__part" data-taux="<?php echo esc_attr( $largeur_cible ); ?>"></div>
+					<div class="csins-jauge__part" data-taux="<?php echo esc_attr( $largeur_cible ); ?>"></div>
 				</div>
-				<p class="bit-jauge__note">
+				<p class="csins-jauge__note">
 					<?php printf(
 						/* translators: 1: confirmed associations, 2: configured cross-sells, 3: orders analysed */
-						esc_html__( '%1$d associations confirmed out of %2$d configured, measured across %3$d orders from the last 12 months.', 'buyit-together' ),
+						esc_html__( '%1$d associations confirmed out of %2$d configured, measured across %3$d orders from the last 12 months.', 'cross-sell-insights' ),
 						(int) $a['confirmees'], (int) $a['total'], (int) $a['commandes']
 					); ?>
 				</p>
-				<p class="bit-jauge__note">
-					<a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=buyit-together&onglet=analyse&analyser=1' ), 'bit_analyser' ) ); ?>">
-						<?php esc_html_e( "Run the analysis again", 'buyit-together' ); ?>
+				<p class="csins-jauge__note">
+					<a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=cross-sell-insights&onglet=analyse&analyser=1' ), 'csins_analyser' ) ); ?>">
+						<?php esc_html_e( "Run the analysis again", 'cross-sell-insights' ); ?>
 					</a>
 				</p>
 			</div>
 		</div>
 		<script>
 		( function () {
-			var jauge = document.querySelector( '.bit-jauge__part' );
+			var jauge = document.querySelector( '.csins-jauge__part' );
 			if ( ! jauge ) { return; }
 			var reduit = window.matchMedia( '(prefers-reduced-motion: reduce)' ).matches;
 			if ( reduit ) {
@@ -1511,18 +1582,18 @@ final class BuyIt_Together {
 		$nb_muets  = count( self::non_recommandes() );
 		?>
 		<?php if ( $nb_exclus || $nb_muets ) : ?>
-			<p class="bit-intro" style="margin-top:-8px">
+			<p class="csins-intro" style="margin-top:-8px">
 				<?php if ( $nb_exclus ) : ?>
 					<?php printf(
 						/* translators: %d: number of products excluded from suggestions */
-						esc_html( _n( '%d product is never suggested elsewhere.', '%d products are never suggested elsewhere.', $nb_exclus, 'buyit-together' ) ),
+						esc_html( _n( '%d product is never suggested elsewhere.', '%d products are never suggested elsewhere.', $nb_exclus, 'cross-sell-insights' ) ),
 						(int) $nb_exclus
 					); ?>
 				<?php endif; ?>
 				<?php if ( $nb_muets ) : ?>
 					<?php printf(
 						/* translators: %d: number of product pages excluded from recommendations */
-						esc_html( _n( '%d product page is excluded from recommendations.', '%d product pages are excluded from recommendations.', $nb_muets, 'buyit-together' ) ),
+						esc_html( _n( '%d product page is excluded from recommendations.', '%d product pages are excluded from recommendations.', $nb_muets, 'cross-sell-insights' ) ),
 						(int) $nb_muets
 					); ?>
 				<?php endif; ?>
@@ -1532,99 +1603,99 @@ final class BuyIt_Together {
 		<?php
 		// Chaque tuile mène à la section qui explique le chiffre : un résumé
 		// n'a d'intérêt que si on peut creuser sans chercher où regarder.
-		$vers_calcul = '#bit-calcul';
-		$vers_recos  = '#bit-recommandations';
+		$vers_calcul = '#csins-calcul';
+		$vers_recos  = '#csins-recommandations';
 		?>
-		<div class="bit-tuiles">
-			<a class="bit-tuile" href="<?php echo esc_url( $vers_calcul ); ?>">
-				<div class="bit-tuile__valeur"><?php echo esc_html( number_format_i18n( (int) $a['total'] ) ); ?></div>
-				<div class="bit-tuile__label"><?php esc_html_e( 'Cross-sells configured', 'buyit-together' ); ?></div>
+		<div class="csins-tuiles">
+			<a class="csins-tuile" href="<?php echo esc_url( $vers_calcul ); ?>">
+				<div class="csins-tuile__valeur"><?php echo esc_html( number_format_i18n( (int) $a['total'] ) ); ?></div>
+				<div class="csins-tuile__label"><?php esc_html_e( 'Cross-sells configured', 'cross-sell-insights' ); ?></div>
 			</a>
-			<a class="bit-tuile" href="<?php echo esc_url( $vers_calcul ); ?>">
-				<div class="bit-tuile__valeur"><?php echo esc_html( number_format_i18n( (int) $a['confirmees'] ) ); ?></div>
-				<div class="bit-tuile__label"><?php esc_html_e( 'Confirmed by your sales', 'buyit-together' ); ?></div>
+			<a class="csins-tuile" href="<?php echo esc_url( $vers_calcul ); ?>">
+				<div class="csins-tuile__valeur"><?php echo esc_html( number_format_i18n( (int) $a['confirmees'] ) ); ?></div>
+				<div class="csins-tuile__label"><?php esc_html_e( 'Confirmed by your sales', 'cross-sell-insights' ); ?></div>
 			</a>
-			<a class="bit-tuile" href="<?php echo esc_url( $vers_recos ); ?>">
-				<div class="bit-tuile__valeur"><?php echo esc_html( number_format_i18n( (int) $a['recos_tot'] ) ); ?></div>
-				<div class="bit-tuile__label"><?php esc_html_e( 'Corrections suggested', 'buyit-together' ); ?></div>
+			<a class="csins-tuile" href="<?php echo esc_url( $vers_recos ); ?>">
+				<div class="csins-tuile__valeur"><?php echo esc_html( number_format_i18n( (int) $a['recos_tot'] ) ); ?></div>
+				<div class="csins-tuile__label"><?php esc_html_e( 'Corrections suggested', 'cross-sell-insights' ); ?></div>
 			</a>
-			<a class="bit-tuile" href="<?php echo esc_url( $vers_calcul ); ?>">
-				<div class="bit-tuile__valeur"><?php echo esc_html( number_format_i18n( (int) ( $info['produits'] ?? 0 ) ) ); ?></div>
-				<div class="bit-tuile__label"><?php esc_html_e( 'Products with suggestions', 'buyit-together' ); ?></div>
+			<a class="csins-tuile" href="<?php echo esc_url( $vers_calcul ); ?>">
+				<div class="csins-tuile__valeur"><?php echo esc_html( number_format_i18n( (int) ( $info['produits'] ?? 0 ) ) ); ?></div>
+				<div class="csins-tuile__label"><?php esc_html_e( 'Products with suggestions', 'cross-sell-insights' ); ?></div>
 			</a>
 		</div>
 
-		<div class="bit-section" id="bit-calcul">
-		<h2><?php esc_html_e( 'Association calculation', 'buyit-together' ); ?></h2>
-		<p><?php esc_html_e( "Counts product pairs appearing in the same order over the last 12 months. Recalculated weekly, and feeds the product page suggestions.", 'buyit-together' ); ?></p>
+		<div class="csins-section" id="csins-calcul">
+		<h2><?php esc_html_e( 'Association calculation', 'cross-sell-insights' ); ?></h2>
+		<p><?php esc_html_e( "Counts product pairs appearing in the same order over the last 12 months. Recalculated weekly, and feeds the product page suggestions.", 'cross-sell-insights' ); ?></p>
 		<?php if ( ! empty( $info['date'] ) ) : ?>
 			<p>
-				<strong><?php esc_html_e( 'Last calculation:', 'buyit-together' ); ?></strong>
+				<strong><?php esc_html_e( 'Last calculation:', 'cross-sell-insights' ); ?></strong>
 				<?php echo esc_html( $info['date'] ); ?> —
 				<?php printf(
 					/* translators: 1: products with associations, 2: orders the calculation used */
-					esc_html__( '%1$d products associated, from %2$d orders.', 'buyit-together' ),
+					esc_html__( '%1$d products associated, from %2$d orders.', 'cross-sell-insights' ),
 					(int) ( $info['produits'] ?? 0 ),
 					(int) ( $info['paniers'] ?? 0 )
 				); ?>
 			</p>
 		<?php else : ?>
-			<p><em><?php esc_html_e( 'No calculation has been run yet.', 'buyit-together' ); ?></em></p>
+			<p><em><?php esc_html_e( 'No calculation has been run yet.', 'cross-sell-insights' ); ?></em></p>
 		<?php endif; ?>
-		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" id="bit-form-recalcul">
-			<input type="hidden" name="action" value="bit_recalcul">
-			<?php wp_nonce_field( 'bit_recalcul' ); ?>
-			<?php submit_button( __( 'Recalculate now', 'buyit-together' ), 'secondary' ); ?>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" id="csins-form-recalcul">
+			<input type="hidden" name="action" value="csins_recalcul">
+			<?php wp_nonce_field( 'csins_recalcul' ); ?>
+			<?php submit_button( __( 'Recalculate now', 'cross-sell-insights' ), 'secondary' ); ?>
 		</form>
 		<script>
 		// Sur un gros catalogue le calcul prend quelques secondes : sans retour,
 		// un clic de plus semble naturel — et double le travail pour rien.
-		document.getElementById( 'bit-form-recalcul' )?.addEventListener( 'submit', function ( e ) {
+		document.getElementById( 'csins-form-recalcul' )?.addEventListener( 'submit', function ( e ) {
 			var bouton = e.target.querySelector( 'button[type="submit"], input[type="submit"]' );
 			if ( ! bouton || bouton.disabled ) { return; }
 			bouton.disabled = true;
 			bouton.dataset.texteOrigine = bouton.value || bouton.textContent;
-			var enCours = '<?php echo esc_js( __( 'Recalculating…', 'buyit-together' ) ); ?>';
+			var enCours = '<?php echo esc_js( __( 'Recalculating…', 'cross-sell-insights' ) ); ?>';
 			if ( 'value' in bouton ) { bouton.value = enCours; } else { bouton.textContent = enCours; }
 		} );
 		</script>
 
-		<h3><?php esc_html_e( 'Products never to suggest elsewhere', 'buyit-together' ); ?></h3>
-		<p><?php esc_html_e( "A consumable, a free gift or an end-of-life part shows up in almost every order: it becomes the companion of your whole catalogue without saying anything useful. Products listed here are removed from the calculation and never appear in suggestions, even if they were added by hand or by a rule.", 'buyit-together' ); ?></p>
+		<h3><?php esc_html_e( 'Products never to suggest elsewhere', 'cross-sell-insights' ); ?></h3>
+		<p><?php esc_html_e( "A consumable, a free gift or an end-of-life part shows up in almost every order: it becomes the companion of your whole catalogue without saying anything useful. Products listed here are removed from the calculation and never appear in suggestions, even if they were added by hand or by a rule.", 'cross-sell-insights' ); ?></p>
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-			<input type="hidden" name="action" value="bit_exclus">
-			<?php wp_nonce_field( 'bit_exclus' ); ?>
+			<input type="hidden" name="action" value="csins_exclus">
+			<?php wp_nonce_field( 'csins_exclus' ); ?>
 			<?php // Sans ce champ, vider la liste n'enverrait rien et l'exclusion resterait. ?>
 			<input type="hidden" name="exclus[]" value="">
 			<select multiple name="exclus[]" class="wc-product-search" style="width:100%;max-width:520px"
-			        data-placeholder="<?php esc_attr_e( 'Search for a product to exclude…', 'buyit-together' ); ?>"
+			        data-placeholder="<?php esc_attr_e( 'Search for a product to exclude…', 'cross-sell-insights' ); ?>"
 			        data-action="woocommerce_json_search_products_and_variations">
 				<?php foreach ( self::exclus() as $eid ) :
 					$e = wc_get_product( $eid ); if ( ! $e ) { continue; } ?>
 					<option value="<?php echo (int) $eid; ?>" selected><?php echo esc_html( $e->get_formatted_name() ); ?></option>
 				<?php endforeach; ?>
 			</select>
-			<p class="description"><?php esc_html_e( "Exclusion takes effect immediately on product pages. The ranking and recommendations below update at the next calculation.", 'buyit-together' ); ?></p>
-			<?php submit_button( __( 'Save exclusions', 'buyit-together' ), 'secondary' ); ?>
+			<p class="description"><?php esc_html_e( "Exclusion takes effect immediately on product pages. The ranking and recommendations below update at the next calculation.", 'cross-sell-insights' ); ?></p>
+			<?php submit_button( __( 'Save exclusions', 'cross-sell-insights' ), 'secondary' ); ?>
 		</form>
 
-		<h3><?php esc_html_e( 'Product pages to stop recommending', 'buyit-together' ); ?></h3>
-		<p><?php esc_html_e( "These products disappear from the “On this product page” column of the recommendations table below. Use it for product pages whose configuration you have decided once and for all not to touch, and whose reminders clutter the list.", 'buyit-together' ); ?></p>
+		<h3><?php esc_html_e( 'Product pages to stop recommending', 'cross-sell-insights' ); ?></h3>
+		<p><?php esc_html_e( "These products disappear from the “On this product page” column of the recommendations table below. Use it for product pages whose configuration you have decided once and for all not to touch, and whose reminders clutter the list.", 'cross-sell-insights' ); ?></p>
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-			<input type="hidden" name="action" value="bit_muets">
-			<?php wp_nonce_field( 'bit_muets' ); ?>
+			<input type="hidden" name="action" value="csins_muets">
+			<?php wp_nonce_field( 'csins_muets' ); ?>
 			<?php // Sans ce champ, vider la liste n'enverrait rien et le réglage resterait. ?>
 			<input type="hidden" name="muets[]" value="">
 			<select multiple name="muets[]" class="wc-product-search" style="width:100%;max-width:520px"
-			        data-placeholder="<?php esc_attr_e( 'Search for a product page to stop recommending…', 'buyit-together' ); ?>"
+			        data-placeholder="<?php esc_attr_e( 'Search for a product page to stop recommending…', 'cross-sell-insights' ); ?>"
 			        data-action="woocommerce_json_search_products_and_variations">
 				<?php foreach ( self::non_recommandes() as $mid ) :
 					$m = wc_get_product( $mid ); if ( ! $m ) { continue; } ?>
 					<option value="<?php echo (int) $mid; ?>" selected><?php echo esc_html( $m->get_formatted_name() ); ?></option>
 				<?php endforeach; ?>
 			</select>
-			<p class="description"><?php esc_html_e( "Screen setting only: these product pages keep showing their suggestion block to visitors, and their products keep counting in the calculation and the ranking.", 'buyit-together' ); ?></p>
-			<?php submit_button( __( 'Save these product pages', 'buyit-together' ), 'secondary' ); ?>
+			<p class="description"><?php esc_html_e( "Screen setting only: these product pages keep showing their suggestion block to visitors, and their products keep counting in the calculation and the ranking.", 'cross-sell-insights' ); ?></p>
+			<?php submit_button( __( 'Save these product pages', 'cross-sell-insights' ), 'secondary' ); ?>
 		</form>
 		</div>
 
@@ -1646,26 +1717,26 @@ final class BuyIt_Together {
 		}
 		?>
 
-		<div class="bit-section" id="bit-recommandations">
-		<h2><?php esc_html_e( 'Recommendations', 'buyit-together' ); ?></h2>
+		<div class="csins-section" id="csins-recommandations">
+		<h2><?php esc_html_e( 'Recommendations', 'cross-sell-insights' ); ?></h2>
 		<?php if ( ! empty( $a['recos'] ) ) : ?>
 			<p>
 				<?php printf(
 					/* translators: %d: number of missing associations */
-					esc_html__( '%d associations are firmly established by your sales but missing from your configuration. The most frequent:', 'buyit-together' ),
+					esc_html__( '%d associations are firmly established by your sales but missing from your configuration. The most frequent:', 'cross-sell-insights' ),
 					(int) $a['recos_tot']
 				); ?>
 			</p>
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-				<input type="hidden" name="action" value="bit_recos">
-				<?php wp_nonce_field( 'bit_recos' ); ?>
+				<input type="hidden" name="action" value="csins_recos">
+				<?php wp_nonce_field( 'csins_recos' ); ?>
 				<table class="widefat striped">
 					<thead>
 						<tr>
-							<td style="width:28px"><input type="checkbox" id="bit-tout"></td>
-							<th><?php esc_html_e( 'On this product page', 'buyit-together' ); ?></th>
-							<th><?php esc_html_e( 'suggest', 'buyit-together' ); ?></th>
-							<th style="width:110px"><?php esc_html_e( 'Bought together', 'buyit-together' ); ?></th>
+							<td style="width:28px"><input type="checkbox" id="csins-tout"></td>
+							<th><?php esc_html_e( 'On this product page', 'cross-sell-insights' ); ?></th>
+							<th><?php esc_html_e( 'suggest', 'cross-sell-insights' ); ?></th>
+							<th style="width:110px"><?php esc_html_e( 'Bought together', 'cross-sell-insights' ); ?></th>
 						</tr>
 					</thead>
 					<tbody>
@@ -1674,15 +1745,15 @@ final class BuyIt_Together {
 							<td><input type="checkbox" name="reco[]" value="<?php echo (int) $r['produit'] . '-' . (int) $r['croise']; ?>"></td>
 							<td><?php echo self::lien_produit( (int) $r['produit'], 'analyse' ); // phpcs:ignore WordPress.Security.EscapeOutput ?></td>
 							<td><?php echo self::lien_produit( (int) $r['croise'], 'analyse' ); // phpcs:ignore WordPress.Security.EscapeOutput ?></td>
-							<td class="bit-num"><?php /* translators: %d: how many times the pair was bought together */ printf( esc_html__( '%d times', 'buyit-together' ), (int) $r['fois'] ); ?></td>
+							<td class="csins-num"><?php /* translators: %d: how many times the pair was bought together */ printf( esc_html__( '%d times', 'cross-sell-insights' ), (int) $r['fois'] ); ?></td>
 						</tr>
 					<?php endforeach; ?>
 					</tbody>
 				</table>
-				<p class="description"><?php esc_html_e( "The plugin adds these products to WooCommerce cross-sells. The operation can be undone from the Cart tab.", 'buyit-together' ); ?></p>
+				<p class="description"><?php esc_html_e( "The plugin adds these products to WooCommerce cross-sells. The operation can be undone from the Cart tab.", 'cross-sell-insights' ); ?></p>
 				<p class="submit" style="display:flex;align-items:center;gap:.8em">
-					<?php submit_button( __( 'Apply selection', 'buyit-together' ), 'primary', 'submit', false ); ?>
-					<span id="bit-compte" class="description" aria-live="polite"></span>
+					<?php submit_button( __( 'Apply selection', 'cross-sell-insights' ), 'primary', 'submit', false ); ?>
+					<span id="csins-compte" class="description" aria-live="polite"></span>
 				</p>
 			</form>
 			<?php
@@ -1693,17 +1764,17 @@ final class BuyIt_Together {
 			// Commentaire de traduction partagé, pour la même raison qu'au-dessus :
 			// les deux appels extraient la même entrée singulier/pluriel.
 			/* translators: %d: number of selected rows */
-			$libelle_un        = _n( '%d selected', '%d selected', 1, 'buyit-together' );
+			$libelle_un        = _n( '%d selected', '%d selected', 1, 'cross-sell-insights' );
 			/* translators: %d: number of selected rows */
-			$libelle_plusieurs = _n( '%d selected', '%d selected', 2, 'buyit-together' );
+			$libelle_plusieurs = _n( '%d selected', '%d selected', 2, 'cross-sell-insights' );
 			?>
 			<script>
 			( function () {
 				// Combien de lignes va vraiment toucher « Appliquer » : la case
 				// « tout cocher » ne le dit pas, et 25 lignes se comptent mal à l'œil.
 				var cases  = document.querySelectorAll( 'input[name="reco[]"]' );
-				var compte = document.getElementById( 'bit-compte' );
-				var tout   = document.getElementById( 'bit-tout' );
+				var compte = document.getElementById( 'csins-compte' );
+				var tout   = document.getElementById( 'csins-tout' );
 				var libUn        = '<?php echo esc_js( $libelle_un ); ?>';
 				var libPlusieurs = '<?php echo esc_js( $libelle_plusieurs ); ?>';
 
@@ -1721,42 +1792,42 @@ final class BuyIt_Together {
 			} )();
 			</script>
 		<?php else : ?>
-			<p><em><?php esc_html_e( 'No missing association: your configuration matches your sales.', 'buyit-together' ); ?></em></p>
+			<p><em><?php esc_html_e( 'No missing association: your configuration matches your sales.', 'cross-sell-insights' ); ?></em></p>
 		<?php endif; ?>
 
 		</div>
 
-		<div class="bit-section">
-		<h2><?php esc_html_e( 'Most frequently bought together', 'buyit-together' ); ?></h2>
+		<div class="csins-section">
+		<h2><?php esc_html_e( 'Most frequently bought together', 'cross-sell-insights' ); ?></h2>
 		<?php if ( ! empty( $a['classement'] ) ) : ?>
 			<p>
 				<?php printf(
 					/* translators: %d: number of product pairs above the threshold */
-					esc_html__( '%d pairs appear at least 3 times in the same order. The top 20:', 'buyit-together' ),
+					esc_html__( '%d pairs appear at least 3 times in the same order. The top 20:', 'cross-sell-insights' ),
 					(int) $a['paires_tot']
 				); ?>
 			</p>
 			<table class="widefat striped">
 				<thead>
 					<tr>
-						<th style="width:70px"><?php esc_html_e( 'Frequency', 'buyit-together' ); ?></th>
-						<th><?php esc_html_e( 'Product', 'buyit-together' ); ?></th>
-						<th><?php esc_html_e( 'bought with', 'buyit-together' ); ?></th>
+						<th style="width:70px"><?php esc_html_e( 'Frequency', 'cross-sell-insights' ); ?></th>
+						<th><?php esc_html_e( 'Product', 'cross-sell-insights' ); ?></th>
+						<th><?php esc_html_e( 'bought with', 'cross-sell-insights' ); ?></th>
 					</tr>
 				</thead>
 				<tbody>
 				<?php foreach ( $a['classement'] as $c ) : ?>
 					<tr>
-						<td class="bit-num"><strong><?php /* translators: %d: how many times the pair was bought together */ printf( esc_html__( '%d times', 'buyit-together' ), (int) $c['fois'] ); ?></strong></td>
+						<td class="csins-num"><strong><?php /* translators: %d: how many times the pair was bought together */ printf( esc_html__( '%d times', 'cross-sell-insights' ), (int) $c['fois'] ); ?></strong></td>
 						<td><?php echo self::lien_produit( (int) $c['a'], 'analyse' ); // phpcs:ignore WordPress.Security.EscapeOutput ?></td>
 						<td><?php echo self::lien_produit( (int) $c['b'], 'analyse' ); // phpcs:ignore WordPress.Security.EscapeOutput ?></td>
 					</tr>
 				<?php endforeach; ?>
 				</tbody>
 			</table>
-			<p class="description"><?php esc_html_e( "Useful for spotting families of parts that get repaired together, and deriving rules from them.", 'buyit-together' ); ?></p>
+			<p class="description"><?php esc_html_e( "Useful for spotting families of parts that get repaired together, and deriving rules from them.", 'cross-sell-insights' ); ?></p>
 		<?php else : ?>
-			<p><em><?php esc_html_e( 'Not enough multi-item orders yet to build a ranking.', 'buyit-together' ); ?></em></p>
+			<p><em><?php esc_html_e( 'Not enough multi-item orders yet to build a ranking.', 'cross-sell-insights' ); ?></em></p>
 		<?php endif; ?>
 		</div>
 		<?php
@@ -1770,195 +1841,195 @@ final class BuyIt_Together {
 	 */
 	private static function onglet_reglages(): void {
 		?>
-		<p class="bit-intro">
-			<?php esc_html_e( "How and where suggestions appear to the customer. Their content is configured in the other tabs; only presentation lives here.", 'buyit-together' ); ?>
+		<p class="csins-intro">
+			<?php esc_html_e( "How and where suggestions appear to the customer. Their content is configured in the other tabs; only presentation lives here.", 'cross-sell-insights' ); ?>
 		</p>
 
-		<div class="bit-section">
-		<h2><?php esc_html_e( 'How suggestions are shown', 'buyit-together' ); ?></h2>
+		<div class="csins-section">
+		<h2><?php esc_html_e( 'How suggestions are shown', 'cross-sell-insights' ); ?></h2>
 		<?php if ( self::store_api_disponible() ) : ?>
-			<p><?php esc_html_e( "The block sits at the bottom of the page, where the customer may not scroll to. The window opens right after Add to cart, at the moment they are already buying — the two are not mutually exclusive.", 'buyit-together' ); ?></p>
+			<p><?php esc_html_e( "The block sits at the bottom of the page, where the customer may not scroll to. The window opens right after Add to cart, at the moment they are already buying — the two are not mutually exclusive.", 'cross-sell-insights' ); ?></p>
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-				<input type="hidden" name="action" value="bit_mode">
-				<?php wp_nonce_field( 'bit_mode' ); ?>
+				<input type="hidden" name="action" value="csins_mode">
+				<?php wp_nonce_field( 'csins_mode' ); ?>
 				<?php $mode_actuel = self::mode_fiche(); ?>
 				<p>
 					<label style="display:block;margin-bottom:.5em">
 						<input type="radio" name="mode_fiche" value="bloc" <?php checked( $mode_actuel, 'bloc' ); ?>>
-						<?php esc_html_e( 'Block at the bottom of the product page only', 'buyit-together' ); ?>
+						<?php esc_html_e( 'Block at the bottom of the product page only', 'cross-sell-insights' ); ?>
 					</label>
 					<label style="display:block;margin-bottom:.5em">
 						<input type="radio" name="mode_fiche" value="modal" <?php checked( $mode_actuel, 'modal' ); ?>>
-						<?php esc_html_e( 'Window on Add to cart only', 'buyit-together' ); ?>
+						<?php esc_html_e( 'Window on Add to cart only', 'cross-sell-insights' ); ?>
 					</label>
 					<label style="display:block;margin-bottom:.5em">
 						<input type="radio" name="mode_fiche" value="both" <?php checked( $mode_actuel, 'both' ); ?>>
-						<?php esc_html_e( 'Both', 'buyit-together' ); ?>
+						<?php esc_html_e( 'Both', 'cross-sell-insights' ); ?>
 					</label>
 				</p>
-				<p class="description"><?php esc_html_e( "The window calls WooCommerce's own cart API in the browser, so the page never reloads. If the theme's Add to cart button already does something similar, test this on a staging copy of the site before turning it on everywhere.", 'buyit-together' ); ?></p>
-				<?php submit_button( __( 'Save', 'buyit-together' ), 'secondary' ); ?>
+				<p class="description"><?php esc_html_e( "The window calls WooCommerce's own cart API in the browser, so the page never reloads. If the theme's Add to cart button already does something similar, test this on a staging copy of the site before turning it on everywhere.", 'cross-sell-insights' ); ?></p>
+				<?php submit_button( __( 'Save', 'cross-sell-insights' ), 'secondary' ); ?>
 			</form>
 		<?php else : ?>
 			<p class="description">
 				<?php
 				/* translators: %s: installed WooCommerce version number */
-				printf( esc_html__( 'The Add to cart window needs WooCommerce 8.3 or later (this site runs %s). The block below stays available regardless.', 'buyit-together' ), esc_html( defined( 'WC_VERSION' ) ? WC_VERSION : '?' ) );
+				printf( esc_html__( 'The Add to cart window needs WooCommerce 8.3 or later (this site runs %s). The block below stays available regardless.', 'cross-sell-insights' ), esc_html( defined( 'WC_VERSION' ) ? WC_VERSION : '?' ) );
 				?>
 			</p>
 		<?php endif; ?>
 		</div>
 
 		<?php if ( self::store_api_disponible() ) : ?>
-		<div class="bit-section">
-		<h2><?php esc_html_e( 'Window appearance', 'buyit-together' ); ?></h2>
-		<p><?php esc_html_e( "Applies whenever the window is enabled above, whether or not the block is also shown.", 'buyit-together' ); ?></p>
+		<div class="csins-section">
+		<h2><?php esc_html_e( 'Window appearance', 'cross-sell-insights' ); ?></h2>
+		<p><?php esc_html_e( "Applies whenever the window is enabled above, whether or not the block is also shown.", 'cross-sell-insights' ); ?></p>
 		<?php $style = self::modal_style(); ?>
-		<div class="bit-apercu-mise-en-page">
-			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" id="bit-form-style">
-				<input type="hidden" name="action" value="bit_style_modal">
-				<?php wp_nonce_field( 'bit_style_modal' ); ?>
+		<div class="csins-apercu-mise-en-page">
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" id="csins-form-style">
+				<input type="hidden" name="action" value="csins_style_modal">
+				<?php wp_nonce_field( 'csins_style_modal' ); ?>
 				<table class="form-table" role="presentation">
 					<tr>
-						<th scope="row"><label for="bit-titre"><?php esc_html_e( 'Suggestions title', 'buyit-together' ); ?></label></th>
-						<td><input type="text" id="bit-titre" name="titre" class="regular-text"
+						<th scope="row"><label for="csins-titre"><?php esc_html_e( 'Suggestions title', 'cross-sell-insights' ); ?></label></th>
+						<td><input type="text" id="csins-titre" name="titre" class="regular-text"
 						           value="<?php echo esc_attr( $style['titre'] ); ?>"
-						           data-apercu="bit-previsu-titre"></td>
+						           data-apercu="csins-previsu-titre"></td>
 					</tr>
 					<tr>
-						<th scope="row"><label for="bit-message"><?php esc_html_e( '"Added to cart" message', 'buyit-together' ); ?></label></th>
-						<td><input type="text" id="bit-message" name="message_ajoute" class="regular-text"
+						<th scope="row"><label for="csins-message"><?php esc_html_e( '"Added to cart" message', 'cross-sell-insights' ); ?></label></th>
+						<td><input type="text" id="csins-message" name="message_ajoute" class="regular-text"
 						           value="<?php echo esc_attr( $style['message_ajoute'] ); ?>"
-						           data-apercu="bit-previsu-message"></td>
+						           data-apercu="csins-previsu-message"></td>
 					</tr>
 					<tr>
-						<th scope="row"><?php esc_html_e( 'Colours', 'buyit-together' ); ?></th>
+						<th scope="row"><?php esc_html_e( 'Colours', 'cross-sell-insights' ); ?></th>
 						<td>
 							<label style="display:block;margin-bottom:.7em">
-								<input type="checkbox" name="couleur_auto" id="bit-couleur-auto" value="1" <?php checked( ! $style['couleurs_personnalisees'] ); ?>>
-								<?php esc_html_e( "Automatically match my theme's colours", 'buyit-together' ); ?>
+								<input type="checkbox" name="couleur_auto" id="csins-couleur-auto" value="1" <?php checked( ! $style['couleurs_personnalisees'] ); ?>>
+								<?php esc_html_e( "Automatically match my theme's colours", 'cross-sell-insights' ); ?>
 							</label>
-							<p class="description" style="margin:0 0 .8em"><?php esc_html_e( "Reads the colour of the real Add to cart button and the page background at the moment the window opens. Uncheck to set fixed colours instead.", 'buyit-together' ); ?></p>
-							<div id="bit-couleurs-fixes">
-								<label style="margin-right:1.5em"><?php esc_html_e( 'Accent', 'buyit-together' ); ?>
+							<p class="description" style="margin:0 0 .8em"><?php esc_html_e( "Reads the colour of the real Add to cart button and the page background at the moment the window opens. Uncheck to set fixed colours instead.", 'cross-sell-insights' ); ?></p>
+							<div id="csins-couleurs-fixes">
+								<label style="margin-right:1.5em"><?php esc_html_e( 'Accent', 'cross-sell-insights' ); ?>
 									<input type="color" name="couleur_accent" value="<?php echo esc_attr( $style['couleur_accent'] ); ?>"
-									       data-var="--bit-accent"></label>
-								<label style="margin-right:1.5em"><?php esc_html_e( 'Background', 'buyit-together' ); ?>
+									       data-var="--csins-accent"></label>
+								<label style="margin-right:1.5em"><?php esc_html_e( 'Background', 'cross-sell-insights' ); ?>
 									<input type="color" name="couleur_fond" value="<?php echo esc_attr( $style['couleur_fond'] ); ?>"
-									       data-var="--bit-fond"></label>
-								<label><?php esc_html_e( 'Text', 'buyit-together' ); ?>
+									       data-var="--csins-fond"></label>
+								<label><?php esc_html_e( 'Text', 'cross-sell-insights' ); ?>
 									<input type="color" name="couleur_texte" value="<?php echo esc_attr( $style['couleur_texte'] ); ?>"
-									       data-var="--bit-texte"></label>
-								<p class="description"><?php esc_html_e( 'Pick background and text colours with enough contrast between them to stay readable.', 'buyit-together' ); ?></p>
+									       data-var="--csins-texte"></label>
+								<p class="description"><?php esc_html_e( 'Pick background and text colours with enough contrast between them to stay readable.', 'cross-sell-insights' ); ?></p>
 							</div>
 						</td>
 					</tr>
 					<tr>
-						<th scope="row"><label for="bit-rayon"><?php esc_html_e( 'Corner rounding', 'buyit-together' ); ?></label></th>
+						<th scope="row"><label for="csins-rayon"><?php esc_html_e( 'Corner rounding', 'cross-sell-insights' ); ?></label></th>
 						<td>
-							<input type="range" id="bit-rayon" name="rayon" min="0" max="32" step="1"
-							       value="<?php echo (int) $style['rayon']; ?>" data-var="--bit-rayon" data-unite="px"
+							<input type="range" id="csins-rayon" name="rayon" min="0" max="32" step="1"
+							       value="<?php echo (int) $style['rayon']; ?>" data-var="--csins-rayon" data-unite="px"
 							       style="vertical-align:middle;width:200px">
-							<span id="bit-rayon-valeur"><?php echo (int) $style['rayon']; ?>px</span>
+							<span id="csins-rayon-valeur"><?php echo (int) $style['rayon']; ?>px</span>
 						</td>
 					</tr>
 					<tr>
-						<th scope="row"><?php esc_html_e( 'Layout', 'buyit-together' ); ?></th>
+						<th scope="row"><?php esc_html_e( 'Layout', 'cross-sell-insights' ); ?></th>
 						<td>
 							<label style="margin-right:1.5em">
 								<input type="radio" name="disposition" value="ligne" <?php checked( $style['disposition'], 'ligne' ); ?> data-apercu-disposition="ligne">
-								<?php esc_html_e( 'Row: one suggestion per line', 'buyit-together' ); ?>
+								<?php esc_html_e( 'Row: one suggestion per line', 'cross-sell-insights' ); ?>
 							</label>
 							<label>
 								<input type="radio" name="disposition" value="colonnes" <?php checked( $style['disposition'], 'colonnes' ); ?> data-apercu-disposition="colonnes">
-								<?php esc_html_e( 'Columns: a small grid of cards', 'buyit-together' ); ?>
+								<?php esc_html_e( 'Columns: a small grid of cards', 'cross-sell-insights' ); ?>
 							</label>
 						</td>
 					</tr>
 				</table>
-				<?php submit_button( __( 'Save', 'buyit-together' ), 'secondary' ); ?>
+				<?php submit_button( __( 'Save', 'cross-sell-insights' ), 'secondary' ); ?>
 			</form>
 
-			<div class="bit-apercu">
-				<p class="description" style="margin-top:0"><?php esc_html_e( 'Preview', 'buyit-together' ); ?></p>
-				<div class="bit-modal bit-apercu__panneau" id="bit-previsu"
+			<div class="csins-apercu">
+				<p class="description" style="margin-top:0"><?php esc_html_e( 'Preview', 'cross-sell-insights' ); ?></p>
+				<div class="csins-modal csins-apercu__panneau" id="csins-previsu"
 				     style="<?php echo esc_attr( sprintf(
-				     	'--bit-accent:%s;--bit-fond:%s;--bit-texte:%s;--bit-rayon:%dpx;',
+				     	'--csins-accent:%s;--csins-fond:%s;--csins-texte:%s;--csins-rayon:%dpx;',
 				     	$style['couleur_accent'], $style['couleur_fond'], $style['couleur_texte'], (int) $style['rayon']
 				     ) ); ?>">
-					<div class="bit-modal__panneau">
-						<p class="bit-modal__ajoute">
-							<span class="bit-modal__coche" aria-hidden="true">&#10003;</span>
-							<span id="bit-previsu-message"><?php echo esc_html( $style['message_ajoute'] ); ?></span>
-							<span class="bit-modal__compte"><?php
+					<div class="csins-modal__panneau">
+						<p class="csins-modal__ajoute">
+							<span class="csins-modal__coche" aria-hidden="true">&#10003;</span>
+							<span id="csins-previsu-message"><?php echo esc_html( $style['message_ajoute'] ); ?></span>
+							<span class="csins-modal__compte"><?php
 							// Même paire singulier/pluriel que dans la fenêtre réelle (voir
 							// afficher_modal()) : un seul msgid partagé pour les traducteurs,
 							// plutôt qu'un texte d'exemple figé en anglais.
 							echo esc_html( sprintf(
 								/* translators: %d: number of items in the cart */
-								_n( '%d item in your cart.', '%d items in your cart.', 1, 'buyit-together' ),
+								_n( '%d item in your cart.', '%d items in your cart.', 1, 'cross-sell-insights' ),
 								1
 							) );
 						?></span>
 						</p>
-						<h3 class="bit-modal__titre" id="bit-previsu-titre"><?php echo esc_html( $style['titre'] ); ?></h3>
-						<ul class="bit-modal__liste bit-modal__liste--<?php echo esc_attr( $style['disposition'] ); ?>" id="bit-previsu-liste">
+						<h3 class="csins-modal__titre" id="csins-previsu-titre"><?php echo esc_html( $style['titre'] ); ?></h3>
+						<ul class="csins-modal__liste csins-modal__liste--<?php echo esc_attr( $style['disposition'] ); ?>" id="csins-previsu-liste">
 							<?php foreach ( [ 'Adhesive Seal Strip', 'Precision Screwdriver Kit' ] as $nom_exemple ) : ?>
-								<li class="bit-modal__item">
+								<li class="csins-modal__item">
 									<a href="#" onclick="return false">
-										<span style="display:block;width:56px;height:56px;border-radius:max(4px,calc(var(--bit-rayon)*.5));background:color-mix(in srgb, var(--bit-texte) 12%, transparent)"></span>
-										<span class="bit-modal__nom"><?php echo esc_html( $nom_exemple ); ?></span>
-										<span class="bit-modal__prix">$12.90</span>
+										<span style="display:block;width:56px;height:56px;border-radius:max(4px,calc(var(--csins-rayon)*.5));background:color-mix(in srgb, var(--csins-texte) 12%, transparent)"></span>
+										<span class="csins-modal__nom"><?php echo esc_html( $nom_exemple ); ?></span>
+										<span class="csins-modal__prix">$12.90</span>
 									</a>
-									<button type="button" class="bit-modal__ajouter"><?php esc_html_e( 'Add', 'buyit-together' ); ?></button>
+									<button type="button" class="csins-modal__ajouter"><?php esc_html_e( 'Add', 'cross-sell-insights' ); ?></button>
 								</li>
 							<?php endforeach; ?>
 						</ul>
-						<div class="bit-modal__pied">
-							<a class="button" href="#" onclick="return false"><?php esc_html_e( 'View cart', 'buyit-together' ); ?></a>
-							<button type="button" class="bit-modal__continuer"><?php esc_html_e( 'Continue shopping', 'buyit-together' ); ?></button>
+						<div class="csins-modal__pied">
+							<a class="button" href="#" onclick="return false"><?php esc_html_e( 'View cart', 'cross-sell-insights' ); ?></a>
+							<button type="button" class="csins-modal__continuer"><?php esc_html_e( 'Continue shopping', 'cross-sell-insights' ); ?></button>
 						</div>
 					</div>
 				</div>
 			</div>
 		</div>
 		<style>
-			.bit-apercu-mise-en-page { display: flex; gap: 2.5em; flex-wrap: wrap; align-items: flex-start; }
-			.bit-apercu-mise-en-page form { flex: 1 1 380px; min-width: 320px; }
-			.bit-apercu { flex: 0 0 auto; }
-			.bit-apercu__panneau { position: static; width: 320px; max-width: 100%; margin: 0; }
+			.csins-apercu-mise-en-page { display: flex; gap: 2.5em; flex-wrap: wrap; align-items: flex-start; }
+			.csins-apercu-mise-en-page form { flex: 1 1 380px; min-width: 320px; }
+			.csins-apercu { flex: 0 0 auto; }
+			.csins-apercu__panneau { position: static; width: 320px; max-width: 100%; margin: 0; }
 			<?php echo self::css_modal(); // phpcs:ignore WordPress.Security.EscapeOutput -- static CSS text, no user input ?>
 		</style>
 		<script>
 		( function () {
-			var previsu = document.getElementById( 'bit-previsu' );
+			var previsu = document.getElementById( 'csins-previsu' );
 			if ( ! previsu ) { return; }
-			document.querySelectorAll( '#bit-form-style [data-var]' ).forEach( function ( champ ) {
+			document.querySelectorAll( '#csins-form-style [data-var]' ).forEach( function ( champ ) {
 				champ.addEventListener( 'input', function () {
 					var valeur = champ.value + ( champ.dataset.unite || '' );
 					previsu.style.setProperty( champ.dataset.var, valeur );
-					if ( 'bit-rayon' === champ.id ) {
-						document.getElementById( 'bit-rayon-valeur' ).textContent = valeur;
+					if ( 'csins-rayon' === champ.id ) {
+						document.getElementById( 'csins-rayon-valeur' ).textContent = valeur;
 					}
 				} );
 			} );
-			document.querySelectorAll( '#bit-form-style [data-apercu]' ).forEach( function ( champ ) {
+			document.querySelectorAll( '#csins-form-style [data-apercu]' ).forEach( function ( champ ) {
 				champ.addEventListener( 'input', function () {
 					document.getElementById( champ.dataset.apercu ).textContent = champ.value;
 				} );
 			} );
-			document.querySelectorAll( '#bit-form-style [data-apercu-disposition]' ).forEach( function ( champ ) {
+			document.querySelectorAll( '#csins-form-style [data-apercu-disposition]' ).forEach( function ( champ ) {
 				champ.addEventListener( 'change', function () {
-					var liste = document.getElementById( 'bit-previsu-liste' );
-					liste.className = 'bit-modal__liste bit-modal__liste--' + champ.dataset.apercuDisposition;
+					var liste = document.getElementById( 'csins-previsu-liste' );
+					liste.className = 'csins-modal__liste csins-modal__liste--' + champ.dataset.apercuDisposition;
 				} );
 			} );
 
 			// Case « couleurs automatiques » : grise les trois sélecteurs plutôt
 			// que de les cacher — on veut qu'on comprenne qu'ils existent, juste
 			// qu'ils ne servent à rien tant que la case reste cochée.
-			var caseAuto     = document.getElementById( 'bit-couleur-auto' );
-			var blocCouleurs = document.getElementById( 'bit-couleurs-fixes' );
+			var caseAuto     = document.getElementById( 'csins-couleur-auto' );
+			var blocCouleurs = document.getElementById( 'csins-couleurs-fixes' );
 			function appliquerEtatCouleurs() {
 				var fixe = ! caseAuto.checked;
 				blocCouleurs.style.opacity = fixe ? '1' : '.45';
@@ -1985,25 +2056,25 @@ final class BuyIt_Together {
 		$regles[] = [ 'termes' => [], 'produits' => [] ]; // une ligne vierge en fin de tableau
 		$termes_dispo = self::termes_disponibles();
 		?>
-		<p class="bit-intro">
-			<?php esc_html_e( "What the customer sees on the product page, before adding to the cart. These suggestions belong to the plugin and do not affect WooCommerce cross-sells.", 'buyit-together' ); ?>
+		<p class="csins-intro">
+			<?php esc_html_e( "What the customer sees on the product page, before adding to the cart. These suggestions belong to the plugin and do not affect WooCommerce cross-sells.", 'cross-sell-insights' ); ?>
 		</p>
 
-		<p><?php esc_html_e( "Associations calculated from history take priority; the rules below only serve products that do not have any yet. The calculation and its diagnosis are in the Analysis tab.", 'buyit-together' ); ?></p>
+		<p><?php esc_html_e( "Associations calculated from history take priority; the rules below only serve products that do not have any yet. The calculation and its diagnosis are in the Analysis tab.", 'cross-sell-insights' ); ?></p>
 
-		<div class="bit-section">
-		<h2><?php esc_html_e( 'Rules by family of parts', 'buyit-together' ); ?></h2>
-		<p><?php esc_html_e( "For products that do not have enough history yet. Choose a tag (a family of items) or a category (a product line), then the items to suggest.", 'buyit-together' ); ?></p>
-		<p class="description"><?php esc_html_e( 'Example: tag “Battery” → Charger, Protective case', 'buyit-together' ); ?></p>
+		<div class="csins-section">
+		<h2><?php esc_html_e( 'Rules by family of parts', 'cross-sell-insights' ); ?></h2>
+		<p><?php esc_html_e( "For products that do not have enough history yet. Choose a tag (a family of items) or a category (a product line), then the items to suggest.", 'cross-sell-insights' ); ?></p>
+		<p class="description"><?php esc_html_e( 'Example: tag “Battery” → Charger, Protective case', 'cross-sell-insights' ); ?></p>
 
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-			<input type="hidden" name="action" value="bit_regles">
-			<?php wp_nonce_field( 'bit_regles' ); ?>
-			<table class="widefat striped" id="bit-regles">
+			<input type="hidden" name="action" value="csins_regles">
+			<?php wp_nonce_field( 'csins_regles' ); ?>
+			<table class="widefat striped" id="csins-regles">
 				<thead>
 					<tr>
-						<th style="width:38%"><?php esc_html_e( 'Target tag or category', 'buyit-together' ); ?></th>
-						<th><?php esc_html_e( 'Products to suggest', 'buyit-together' ); ?></th>
+						<th style="width:38%"><?php esc_html_e( 'Target tag or category', 'cross-sell-insights' ); ?></th>
+						<th><?php esc_html_e( 'Products to suggest', 'cross-sell-insights' ); ?></th>
 						<th style="width:60px"></th>
 					</tr>
 				</thead>
@@ -2013,7 +2084,7 @@ final class BuyIt_Together {
 						<td>
 							<select multiple class="wc-enhanced-select" style="width:100%"
 							        name="regles[<?php echo (int) $i; ?>][termes][]"
-							        data-placeholder="<?php esc_attr_e( 'Choose a tag or a category…', 'buyit-together' ); ?>">
+							        data-placeholder="<?php esc_attr_e( 'Choose a tag or a category…', 'cross-sell-insights' ); ?>">
 								<?php foreach ( $termes_dispo as $cle => $libelle ) : ?>
 									<option value="<?php echo esc_attr( $cle ); ?>"
 										<?php selected( in_array( $cle, (array) $regle['termes'], true ) ); ?>>
@@ -2025,7 +2096,7 @@ final class BuyIt_Together {
 						<td>
 							<select multiple class="wc-product-search" style="width:100%"
 							        name="regles[<?php echo (int) $i; ?>][produits][]"
-							        data-placeholder="<?php esc_attr_e( 'Search for a product…', 'buyit-together' ); ?>"
+							        data-placeholder="<?php esc_attr_e( 'Search for a product…', 'cross-sell-insights' ); ?>"
 							        data-action="woocommerce_json_search_products_and_variations">
 								<?php foreach ( (array) $regle['produits'] as $pid ) :
 									$prod = wc_get_product( $pid );
@@ -2037,16 +2108,16 @@ final class BuyIt_Together {
 							</select>
 						</td>
 						<td>
-							<button type="button" class="button bit-suppr" title="<?php esc_attr_e( 'Remove', 'buyit-together' ); ?>">&times;</button>
+							<button type="button" class="button csins-suppr" title="<?php esc_attr_e( 'Remove', 'cross-sell-insights' ); ?>">&times;</button>
 						</td>
 					</tr>
 				<?php endforeach; ?>
 				</tbody>
 			</table>
 			<p>
-				<button type="button" class="button" id="bit-ajouter"><?php esc_html_e( 'Add a rule', 'buyit-together' ); ?></button>
+				<button type="button" class="button" id="csins-ajouter"><?php esc_html_e( 'Add a rule', 'cross-sell-insights' ); ?></button>
 			</p>
-			<?php submit_button( __( 'Save rules', 'buyit-together' ) ); ?>
+			<?php submit_button( __( 'Save rules', 'cross-sell-insights' ) ); ?>
 		</form>
 		</div>
 		<script>
@@ -2068,19 +2139,19 @@ final class BuyIt_Together {
 						'<td><select multiple class="wc-product-search" style="width:100%" ' +
 							'name="regles[' + i + '][produits][]" ' +
 							'data-action="woocommerce_json_search_products_and_variations"></select></td>' +
-						'<td><button type="button" class="button bit-suppr">&times;</button></td>' +
+						'<td><button type="button" class="button csins-suppr">&times;</button></td>' +
 					'</tr>'
 				);
 			}
 
-			$( '#bit-ajouter' ).on( 'click', function () {
-				var $corps = $( '#bit-regles tbody' );
+			$( '#csins-ajouter' ).on( 'click', function () {
+				var $corps = $( '#csins-regles tbody' );
 				$corps.append( nouvelleLigne( $corps.find( 'tr' ).length ) );
 				$( document.body ).trigger( 'wc-enhanced-select-init' );
 			} );
 
-			$( document ).on( 'click', '.bit-suppr', function () {
-				var $corps = $( '#bit-regles tbody' );
+			$( document ).on( 'click', '.csins-suppr', function () {
+				var $corps = $( '#csins-regles tbody' );
 				if ( $corps.find( 'tr' ).length > 1 ) {
 					$( this ).closest( 'tr' ).remove();
 				}
@@ -2097,78 +2168,78 @@ final class BuyIt_Together {
 	 */
 	private static function onglet_panier(): void {
 		?>
-		<p class="bit-intro">
-			<?php esc_html_e( "What the customer sees in their cart, after choosing a product. These are WooCommerce cross-sells, shared with the rest of the site.", 'buyit-together' ); ?>
+		<p class="csins-intro">
+			<?php esc_html_e( "What the customer sees in their cart, after choosing a product. These are WooCommerce cross-sells, shared with the rest of the site.", 'cross-sell-insights' ); ?>
 		</p>
 
 		<?php $historique = self::historique(); ?>
 		<?php if ( $historique ) : ?>
 			<div class="notice notice-info inline">
-				<p><strong><?php esc_html_e( 'Recent cross-sell changes', 'buyit-together' ); ?></strong></p>
+				<p><strong><?php esc_html_e( 'Recent cross-sell changes', 'cross-sell-insights' ); ?></strong></p>
 				<ol style="margin:0 0 .5em 1.5em">
 					<?php foreach ( array_reverse( $historique ) as $i => $op ) : ?>
 						<li>
 							<?php printf(
 								/* translators: 1: date, 2: name of the operation, 3: number of products affected */
-								esc_html__( '%1$s — %2$s — %3$d products', 'buyit-together' ),
+								esc_html__( '%1$s — %2$s — %3$d products', 'cross-sell-insights' ),
 								esc_html( $op['date'] ?? '' ),
 								esc_html( $op['libelle'] ?? '' ),
 								count( (array) ( $op['donnees'] ?? [] ) )
 							); ?>
 							<?php if ( 0 === $i ) : ?>
-								<a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=bit_annuler' ), 'bit_annuler' ) ); ?>"
-								   class="button button-small"><?php esc_html_e( 'Undo this one', 'buyit-together' ); ?></a>
+								<a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin-post.php?action=csins_annuler' ), 'csins_annuler' ) ); ?>"
+								   class="button button-small"><?php esc_html_e( 'Undo this one', 'cross-sell-insights' ); ?></a>
 							<?php endif; ?>
 						</li>
 					<?php endforeach; ?>
 				</ol>
-				<p class="description"><?php esc_html_e( "Undo works one operation at a time, from the most recent to the oldest.", 'buyit-together' ); ?></p>
+				<p class="description"><?php esc_html_e( "Undo works one operation at a time, from the most recent to the oldest.", 'cross-sell-insights' ); ?></p>
 			</div>
 		<?php endif; ?>
 
-		<div class="bit-section">
-		<h2><?php esc_html_e( 'Bulk assignment', 'buyit-together' ); ?></h2>
-		<p><?php esc_html_e( "Adds cross-sell products to a whole category, a tag or a selection of products.", 'buyit-together' ); ?></p>
+		<div class="csins-section">
+		<h2><?php esc_html_e( 'Bulk assignment', 'cross-sell-insights' ); ?></h2>
+		<p><?php esc_html_e( "Adds cross-sell products to a whole category, a tag or a selection of products.", 'cross-sell-insights' ); ?></p>
 
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-			<input type="hidden" name="action" value="bit_masse">
-			<?php wp_nonce_field( 'bit_masse' ); ?>
+			<input type="hidden" name="action" value="csins_masse">
+			<?php wp_nonce_field( 'csins_masse' ); ?>
 			<table class="form-table">
 				<tr>
-					<th scope="row"><label><?php esc_html_e( 'Apply to', 'buyit-together' ); ?></label></th>
+					<th scope="row"><label><?php esc_html_e( 'Apply to', 'cross-sell-insights' ); ?></label></th>
 					<td>
 						<select multiple class="wc-enhanced-select" style="width:100%;max-width:520px" name="cibles_termes[]"
-						        data-placeholder="<?php esc_attr_e( 'Categories or tags…', 'buyit-together' ); ?>">
+						        data-placeholder="<?php esc_attr_e( 'Categories or tags…', 'cross-sell-insights' ); ?>">
 							<?php foreach ( self::termes_disponibles() as $cle => $libelle ) : ?>
 								<option value="<?php echo esc_attr( $cle ); ?>"><?php echo esc_html( $libelle ); ?></option>
 							<?php endforeach; ?>
 						</select>
-						<p class="description"><?php esc_html_e( 'and / or specific products:', 'buyit-together' ); ?></p>
+						<p class="description"><?php esc_html_e( 'and / or specific products:', 'cross-sell-insights' ); ?></p>
 						<select multiple class="wc-product-search" style="width:100%;max-width:520px" name="cibles_produits[]"
-						        data-placeholder="<?php esc_attr_e( 'Search for a product…', 'buyit-together' ); ?>"
+						        data-placeholder="<?php esc_attr_e( 'Search for a product…', 'cross-sell-insights' ); ?>"
 						        data-action="woocommerce_json_search_products_and_variations"></select>
 					</td>
 				</tr>
 				<tr>
-					<th scope="row"><label><?php esc_html_e( 'Cross-sell products to add', 'buyit-together' ); ?></label></th>
+					<th scope="row"><label><?php esc_html_e( 'Cross-sell products to add', 'cross-sell-insights' ); ?></label></th>
 					<td>
 						<select multiple class="wc-product-search" style="width:100%;max-width:520px" name="croises[]"
-						        data-placeholder="<?php esc_attr_e( 'Search for a product…', 'buyit-together' ); ?>"
+						        data-placeholder="<?php esc_attr_e( 'Search for a product…', 'cross-sell-insights' ); ?>"
 						        data-action="woocommerce_json_search_products_and_variations"></select>
 					</td>
 				</tr>
 				<tr>
-					<th scope="row"><?php esc_html_e( 'Mode', 'buyit-together' ); ?></th>
+					<th scope="row"><?php esc_html_e( 'Mode', 'cross-sell-insights' ); ?></th>
 					<td>
 						<label><input type="radio" name="mode" value="ajouter" checked>
-							<?php esc_html_e( 'Add to existing cross-sells', 'buyit-together' ); ?></label><br>
+							<?php esc_html_e( 'Add to existing cross-sells', 'cross-sell-insights' ); ?></label><br>
 						<label><input type="radio" name="mode" value="remplacer">
-							<?php esc_html_e( 'Replace existing cross-sells', 'buyit-together' ); ?></label>
-						<p class="description"><?php esc_html_e( "Previous values are saved: the operation can be undone.", 'buyit-together' ); ?></p>
+							<?php esc_html_e( 'Replace existing cross-sells', 'cross-sell-insights' ); ?></label>
+						<p class="description"><?php esc_html_e( "Previous values are saved: the operation can be undone.", 'cross-sell-insights' ); ?></p>
 					</td>
 				</tr>
 			</table>
-			<?php submit_button( __( 'Apply', 'buyit-together' ) ); ?>
+			<?php submit_button( __( 'Apply', 'cross-sell-insights' ) ); ?>
 		</form>
 		</div>
 		<?php
@@ -2201,7 +2272,7 @@ final class BuyIt_Together {
 		if ( ! in_array( $par, $choix_par, true ) ) {
 			$par = 25;
 		}
-		$base   = admin_url( 'admin.php?page=buyit-together&onglet=' . $onglet_courant );
+		$base   = admin_url( 'admin.php?page=cross-sell-insights&onglet=' . $onglet_courant );
 
 		// On arrive parfois d'un tableau de résultats : garder le chemin du retour.
 		// Le nom « retour » est déjà pris par le formulaire d'enregistrement.
@@ -2212,22 +2283,22 @@ final class BuyIt_Together {
 		}
 		?>
 		<?php if ( $depuis ) : ?>
-			<p class="bit-retour">
-				<a href="<?php echo esc_url( admin_url( 'admin.php?page=buyit-together&onglet=analyse' ) ); ?>">
-					&larr; <?php esc_html_e( "Back to the analysis", 'buyit-together' ); ?>
+			<p class="csins-retour">
+				<a href="<?php echo esc_url( admin_url( 'admin.php?page=cross-sell-insights&onglet=analyse' ) ); ?>">
+					&larr; <?php esc_html_e( "Back to the analysis", 'cross-sell-insights' ); ?>
 				</a>
 			</p>
 		<?php endif; ?>
-		<p class="bit-intro">
+		<p class="csins-intro">
 			<?php if ( 'gamme' === $mode ) : ?>
-				<?php esc_html_e( "Upsells offer a higher-end alternative to the product being viewed, on its page. Rarely useful on a spare-parts catalogue, but editable here if needed.", 'buyit-together' ); ?>
+				<?php esc_html_e( "Upsells offer a higher-end alternative to the product being viewed, on its page. Rarely useful on a spare-parts catalogue, but editable here if needed.", 'cross-sell-insights' ); ?>
 			<?php else : ?>
-				<?php esc_html_e( "Review view: the products of a category or a tag, with their product page suggestions and their cart cross-sells. Calculated associations are shown for reference.", 'buyit-together' ); ?>
+				<?php esc_html_e( "Review view: the products of a category or a tag, with their product page suggestions and their cart cross-sells. Calculated associations are shown for reference.", 'cross-sell-insights' ); ?>
 			<?php endif; ?>
 		</p>
 
 		<form method="get" style="margin-bottom:1em">
-			<input type="hidden" name="page" value="buyit-together">
+			<input type="hidden" name="page" value="cross-sell-insights">
 			<input type="hidden" name="onglet" value="<?php echo esc_attr( $onglet_courant ); ?>">
 			<?php if ( $depuis ) : ?>
 				<input type="hidden" name="depuis" value="<?php echo esc_attr( $depuis ); ?>">
@@ -2235,8 +2306,8 @@ final class BuyIt_Together {
 			<p style="margin:0 0 .5em">
 				<select name="terme" class="wc-enhanced-select" style="min-width:340px"
 				        data-allow_clear="true"
-				        data-placeholder="<?php esc_attr_e( 'A category or a tag…', 'buyit-together' ); ?>">
-					<option value=""><?php esc_html_e( '— none —', 'buyit-together' ); ?></option>
+				        data-placeholder="<?php esc_attr_e( 'A category or a tag…', 'cross-sell-insights' ); ?>">
+					<option value=""><?php esc_html_e( '— none —', 'cross-sell-insights' ); ?></option>
 					<?php foreach ( self::termes_disponibles() as $cle => $libelle ) : ?>
 						<option value="<?php echo esc_attr( $cle ); ?>" <?php selected( $terme, $cle ); ?>>
 							<?php echo esc_html( $libelle ); ?>
@@ -2246,7 +2317,7 @@ final class BuyIt_Together {
 			</p>
 			<p style="margin:0 0 .5em">
 				<select multiple name="produits[]" class="wc-product-search" style="min-width:340px;max-width:520px"
-				        data-placeholder="<?php esc_attr_e( 'and / or specific products…', 'buyit-together' ); ?>"
+				        data-placeholder="<?php esc_attr_e( 'and / or specific products…', 'cross-sell-insights' ); ?>"
 				        data-action="woocommerce_json_search_products_and_variations">
 					<?php foreach ( $produits_choisis as $cid ) :
 						$c = wc_get_product( $cid ); if ( ! $c ) { continue; } ?>
@@ -2255,25 +2326,25 @@ final class BuyIt_Together {
 				</select>
 			</p>
 			<p style="margin:0 0 .5em">
-				<label for="bit-par"><?php esc_html_e( 'Products per page:', 'buyit-together' ); ?></label>
-				<select name="par" id="bit-par">
+				<label for="csins-par"><?php esc_html_e( 'Products per page:', 'cross-sell-insights' ); ?></label>
+				<select name="par" id="csins-par">
 					<?php foreach ( $choix_par as $n ) : ?>
 						<option value="<?php echo (int) $n; ?>" <?php selected( $par, $n ); ?>><?php echo (int) $n; ?></option>
 					<?php endforeach; ?>
 				</select>
 			</p>
-			<?php submit_button( __( 'Show', 'buyit-together' ), 'secondary', '', false ); ?>
+			<?php submit_button( __( 'Show', 'cross-sell-insights' ), 'secondary', '', false ); ?>
 			<?php if ( $terme || $produits_choisis ) : ?>
 				<a class="button-link" style="margin-left:.8em"
-				   href="<?php echo esc_url( admin_url( 'admin.php?page=buyit-together&onglet=' . $onglet_courant ) ); ?>">
-					<?php esc_html_e( 'Reset the selection', 'buyit-together' ); ?>
+				   href="<?php echo esc_url( admin_url( 'admin.php?page=cross-sell-insights&onglet=' . $onglet_courant ) ); ?>">
+					<?php esc_html_e( 'Reset the selection', 'cross-sell-insights' ); ?>
 				</a>
 			<?php endif; ?>
 		</form>
 
 		<?php
 		if ( ! $terme && ! $produits_choisis ) {
-			echo '<p><em>' . esc_html__( 'Choose a category, a tag or products to start.', 'buyit-together' ) . '</em></p>';
+			echo '<p><em>' . esc_html__( 'Choose a category, a tag or products to start.', 'cross-sell-insights' ) . '</em></p>';
 			return;
 		}
 
@@ -2303,7 +2374,7 @@ final class BuyIt_Together {
 		$ids = array_values( array_unique( array_map( 'intval', $ids ) ) );
 
 		if ( ! $ids ) {
-			echo '<p><em>' . esc_html__( 'No product in this selection.', 'buyit-together' ) . '</em></p>';
+			echo '<p><em>' . esc_html__( 'No product in this selection.', 'cross-sell-insights' ) . '</em></p>';
 			return;
 		}
 
@@ -2319,14 +2390,14 @@ final class BuyIt_Together {
 		] );
 
 		if ( ! $q->have_posts() ) {
-			echo '<p><em>' . esc_html__( 'No product in this selection.', 'buyit-together' ) . '</em></p>';
+			echo '<p><em>' . esc_html__( 'No product in this selection.', 'cross-sell-insights' ) . '</em></p>';
 			return;
 		}
 		?>
 		<p>
 			<?php printf(
 				/* translators: 1: total products, 2: current page, 3: total pages */
-				esc_html__( '%1$d products — page %2$d of %3$d', 'buyit-together' ),
+				esc_html__( '%1$d products — page %2$d of %3$d', 'cross-sell-insights' ),
 				(int) $q->found_posts, (int) $page, (int) $q->max_num_pages
 			); ?>
 		</p>
@@ -2334,25 +2405,25 @@ final class BuyIt_Together {
 		<style>
 			/* Les noms de produits sont longs : sans largeur fixe, les étiquettes
 			   select2 poussent le tableau hors du conteneur d'administration. */
-			.bit-editeur { table-layout: fixed; width: 100%; }
-			.bit-editeur th,
-			.bit-editeur td { overflow-wrap: anywhere; vertical-align: top; }
-			.bit-editeur .select2-container { max-width: 100% !important; }
-			.bit-editeur .select2-selection--multiple { min-height: 34px; }
-			.bit-editeur .select2-selection__choice {
+			.csins-editeur { table-layout: fixed; width: 100%; }
+			.csins-editeur th,
+			.csins-editeur td { overflow-wrap: anywhere; vertical-align: top; }
+			.csins-editeur .select2-container { max-width: 100% !important; }
+			.csins-editeur .select2-selection--multiple { min-height: 34px; }
+			.csins-editeur .select2-selection__choice {
 				max-width: 100%;
 				white-space: normal;
 				line-height: 1.35;
 			}
-			.bit-editeur ul { list-style: disc; padding-left: 1.1em; }
-			.bit-defile { overflow-x: auto; }
+			.csins-editeur ul { list-style: disc; padding-left: 1.1em; }
+			.csins-defile { overflow-x: auto; }
 			@media screen and (max-width: 1100px) {
-				.bit-editeur { min-width: 900px; }
+				.csins-editeur { min-width: 900px; }
 			}
 		</style>
 
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-			<input type="hidden" name="action" value="bit_editeur">
+			<input type="hidden" name="action" value="csins_editeur">
 			<input type="hidden" name="retour" value="<?php echo esc_attr( $terme . '|' . $page . '|' . $onglet_courant . '|' . $par ); ?>">
 			<?php if ( $depuis ) : ?>
 				<input type="hidden" name="depuis" value="<?php echo esc_attr( $depuis ); ?>">
@@ -2360,51 +2431,51 @@ final class BuyIt_Together {
 			<?php foreach ( $produits_choisis as $cid ) : ?>
 				<input type="hidden" name="retour_produits[]" value="<?php echo (int) $cid; ?>">
 			<?php endforeach; ?>
-			<?php wp_nonce_field( 'bit_editeur' ); ?>
-			<div class="bit-groupe">
-				<strong><?php esc_html_e( 'Apply to every row shown', 'buyit-together' ); ?></strong>
+			<?php wp_nonce_field( 'csins_editeur' ); ?>
+			<div class="csins-groupe">
+				<strong><?php esc_html_e( 'Apply to every row shown', 'cross-sell-insights' ); ?></strong>
 				<p style="margin:.6em 0 .4em">
-					<select class="wc-product-search" style="width:100%;max-width:460px" id="bit-groupe-produit"
-					        data-placeholder="<?php esc_attr_e( 'Choose the product to add…', 'buyit-together' ); ?>"
+					<select class="wc-product-search" style="width:100%;max-width:460px" id="csins-groupe-produit"
+					        data-placeholder="<?php esc_attr_e( 'Choose the product to add…', 'cross-sell-insights' ); ?>"
 					        data-action="woocommerce_json_search_products_and_variations"></select>
 				</p>
 				<p style="margin:.4em 0 0">
 					<?php if ( 'gamme' === $mode ) : ?>
-						<button type="button" class="button" data-cible="upsell"><?php esc_html_e( 'Add to upsells', 'buyit-together' ); ?></button>
+						<button type="button" class="button" data-cible="upsell"><?php esc_html_e( 'Add to upsells', 'cross-sell-insights' ); ?></button>
 					<?php else : ?>
-						<button type="button" class="button" data-cible="suggestion"><?php esc_html_e( 'Add to suggestions', 'buyit-together' ); ?></button>
-						<button type="button" class="button" data-cible="croise"><?php esc_html_e( 'Add to cross-sells', 'buyit-together' ); ?></button>
+						<button type="button" class="button" data-cible="suggestion"><?php esc_html_e( 'Add to suggestions', 'cross-sell-insights' ); ?></button>
+						<button type="button" class="button" data-cible="croise"><?php esc_html_e( 'Add to cross-sells', 'cross-sell-insights' ); ?></button>
 					<?php endif; ?>
-					<button type="button" class="button" data-cible="retirer"><?php esc_html_e( 'Remove everywhere', 'buyit-together' ); ?></button>
+					<button type="button" class="button" data-cible="retirer"><?php esc_html_e( 'Remove everywhere', 'cross-sell-insights' ); ?></button>
 				</p>
 				<p class="description" style="margin:.6em 0 0">
 					<?php printf(
 						/* translators: %d: number of products shown on the current page */
-						esc_html__( "Acts on the %d products shown on this page. Nothing is saved until you confirm at the bottom.", 'buyit-together' ),
+						esc_html__( "Acts on the %d products shown on this page. Nothing is saved until you confirm at the bottom.", 'cross-sell-insights' ),
 						(int) $q->post_count
 					); ?>
 				</p>
 			</div>
 
-			<div class="bit-defile">
-			<table class="widefat striped bit-editeur">
+			<div class="csins-defile">
+			<table class="widefat striped csins-editeur">
 				<thead>
 					<tr>
 						<?php if ( 'gamme' === $mode ) : ?>
-							<th style="width:35%"><?php esc_html_e( 'Product', 'buyit-together' ); ?></th>
+							<th style="width:35%"><?php esc_html_e( 'Product', 'cross-sell-insights' ); ?></th>
 							<th style="width:65%">
-								<?php esc_html_e( 'Upsells', 'buyit-together' ); ?>
-								<span style="font-weight:400;color:#646970"><?php esc_html_e( '— product page, as an alternative', 'buyit-together' ); ?></span>
+								<?php esc_html_e( 'Upsells', 'cross-sell-insights' ); ?>
+								<span style="font-weight:400;color:#646970"><?php esc_html_e( '— product page, as an alternative', 'cross-sell-insights' ); ?></span>
 							</th>
 						<?php else : ?>
-							<th style="width:24%"><?php esc_html_e( 'Product', 'buyit-together' ); ?></th>
+							<th style="width:24%"><?php esc_html_e( 'Product', 'cross-sell-insights' ); ?></th>
 							<th style="width:38%">
-								<?php esc_html_e( 'Suggestions', 'buyit-together' ); ?>
-								<span style="font-weight:400;color:#646970"><?php esc_html_e( '— product page', 'buyit-together' ); ?></span>
+								<?php esc_html_e( 'Suggestions', 'cross-sell-insights' ); ?>
+								<span style="font-weight:400;color:#646970"><?php esc_html_e( '— product page', 'cross-sell-insights' ); ?></span>
 							</th>
 							<th style="width:38%">
-								<?php esc_html_e( 'Cross-sells', 'buyit-together' ); ?>
-								<span style="font-weight:400;color:#646970"><?php esc_html_e( '— cart', 'buyit-together' ); ?></span>
+								<?php esc_html_e( 'Cross-sells', 'cross-sell-insights' ); ?>
+								<span style="font-weight:400;color:#646970"><?php esc_html_e( '— cart', 'cross-sell-insights' ); ?></span>
 							</th>
 						<?php endif; ?>
 					</tr>
@@ -2432,12 +2503,12 @@ final class BuyIt_Together {
 					<tr>
 						<td>
 							<strong style="display:block;font-weight:600"><?php echo esc_html( get_the_title() ); ?></strong>
-							<span class="bit-actions">
+							<span class="csins-actions">
 								<a href="<?php echo esc_url( get_edit_post_link( $pid ) ); ?>" target="_blank">
-									<?php esc_html_e( 'Edit', 'buyit-together' ); ?>
+									<?php esc_html_e( 'Edit', 'cross-sell-insights' ); ?>
 								</a>
 								<a href="<?php echo esc_url( get_permalink( $pid ) ); ?>" target="_blank">
-									<?php esc_html_e( 'View product', 'buyit-together' ); ?>
+									<?php esc_html_e( 'View product', 'cross-sell-insights' ); ?>
 								</a>
 							</span>
 						</td>
@@ -2446,7 +2517,7 @@ final class BuyIt_Together {
 								<input type="hidden" name="lignes[<?php echo (int) $pid; ?>][upsell][]" value="">
 								<select multiple class="wc-product-search" style="width:100%"
 								        name="lignes[<?php echo (int) $pid; ?>][upsell][]"
-								        data-placeholder="<?php esc_attr_e( 'Search…', 'buyit-together' ); ?>"
+								        data-placeholder="<?php esc_attr_e( 'Search…', 'cross-sell-insights' ); ?>"
 								        data-action="woocommerce_json_search_products_and_variations">
 									<?php foreach ( $produit->get_upsell_ids() as $uid ) :
 										$u = wc_get_product( $uid ); if ( ! $u ) { continue; } ?>
@@ -2459,7 +2530,7 @@ final class BuyIt_Together {
 								<input type="hidden" name="lignes[<?php echo (int) $pid; ?>][suggestion][]" value="">
 								<select multiple class="wc-product-search" style="width:100%"
 								        name="lignes[<?php echo (int) $pid; ?>][suggestion][]"
-								        data-placeholder="<?php esc_attr_e( 'Search…', 'buyit-together' ); ?>"
+								        data-placeholder="<?php esc_attr_e( 'Search…', 'cross-sell-insights' ); ?>"
 								        data-action="woocommerce_json_search_products_and_variations">
 									<?php foreach ( $manuels as $mid ) :
 										$m = wc_get_product( $mid ); if ( ! $m ) { continue; } ?>
@@ -2468,7 +2539,7 @@ final class BuyIt_Together {
 								</select>
 								<?php if ( $calcules ) : ?>
 									<p class="description" style="margin:.4em 0 0">
-										<?php esc_html_e( 'Calculated:', 'buyit-together' ); ?>
+										<?php esc_html_e( 'Calculated:', 'cross-sell-insights' ); ?>
 										<?php
 										$noms = array_map( static fn( $c ) => get_the_title( (int) $c ), $calcules );
 										echo esc_html( implode( ' · ', array_filter( $noms ) ) );
@@ -2480,7 +2551,7 @@ final class BuyIt_Together {
 								<input type="hidden" name="lignes[<?php echo (int) $pid; ?>][croise][]" value="">
 								<select multiple class="wc-product-search" style="width:100%"
 								        name="lignes[<?php echo (int) $pid; ?>][croise][]"
-								        data-placeholder="<?php esc_attr_e( 'Search…', 'buyit-together' ); ?>"
+								        data-placeholder="<?php esc_attr_e( 'Search…', 'cross-sell-insights' ); ?>"
 								        data-action="woocommerce_json_search_products_and_variations">
 									<?php foreach ( $croise as $cid ) :
 										$c = wc_get_product( $cid ); if ( ! $c ) { continue; } ?>
@@ -2494,34 +2565,34 @@ final class BuyIt_Together {
 				</tbody>
 			</table>
 			</div>
-			<?php submit_button( __( 'Save this page', 'buyit-together' ) ); ?>
+			<?php submit_button( __( 'Save this page', 'cross-sell-insights' ) ); ?>
 		</form>
 		<script>
 		jQuery( function ( $ ) {
 			// Recalcule la largeur des sélecteurs une fois la table rendue.
 			$( document.body ).trigger( 'wc-enhanced-select-init' );
 			$( window ).on( 'resize', function () {
-				$( '.bit-editeur .select2-container' ).css( 'width', '100%' );
+				$( '.csins-editeur .select2-container' ).css( 'width', '100%' );
 			} ).trigger( 'resize' );
 
 			// --- Application groupée aux lignes affichées ---------------------
 			// On modifie les champs sans rien enregistrer : l'utilisateur voit le
 			// résultat, peut l'ajuster ligne par ligne, puis valide le formulaire.
-			$( '.bit-groupe button[data-cible]' ).on( 'click', function () {
+			$( '.csins-groupe button[data-cible]' ).on( 'click', function () {
 				var cible = $( this ).data( 'cible' ),
-				    $src  = $( '#bit-groupe-produit' ),
+				    $src  = $( '#csins-groupe-produit' ),
 				    id    = $src.val(),
 				    label = $src.find( 'option:selected' ).text();
 
 				if ( ! id ) {
-					window.alert( '<?php echo esc_js( __( 'Choose a product first.', 'buyit-together' ) ); ?>' );
+					window.alert( '<?php echo esc_js( __( 'Choose a product first.', 'cross-sell-insights' ) ); ?>' );
 					return;
 				}
 
 				var suffixe = ( 'retirer' === cible ) ? null : '[' + cible + '][]',
 				    touches = 0;
 
-				$( '.bit-editeur tbody tr' ).each( function () {
+				$( '.csins-editeur tbody tr' ).each( function () {
 					var $ligne = $( this );
 
 					// « Retirer partout » agit sur les deux colonnes.
@@ -2556,9 +2627,9 @@ final class BuyIt_Together {
 					} );
 				} );
 
-				$( '.bit-groupe .description' ).append(
+				$( '.csins-groupe .description' ).append(
 					$( '<span style="color:#2271b1;display:block;margin-top:.4em"></span>' )
-						.text( touches + ' <?php echo esc_js( __( 'field(s) changed — remember to save.', 'buyit-together' ) ); ?>' )
+						.text( touches + ' <?php echo esc_js( __( 'field(s) changed — remember to save.', 'cross-sell-insights' ) ); ?>' )
 				);
 			} );
 		} );
@@ -2589,9 +2660,9 @@ final class BuyIt_Together {
 	/** Enregistre les produits liés saisis dans l'éditeur par catégorie. */
 	public static function enregistrer_editeur(): void {
 		if ( ! current_user_can( 'manage_woocommerce' ) ) {
-			wp_die( esc_html__( 'Permission denied.', 'buyit-together' ) );
+			wp_die( esc_html__( 'Permission denied.', 'cross-sell-insights' ) );
 		}
-		check_admin_referer( 'bit_editeur' );
+		check_admin_referer( 'csins_editeur' );
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- nonce checked above via check_admin_referer(); each element is sanitized on the next lines.
 		$lignes     = isset( $_POST['lignes'] ) && is_array( $_POST['lignes'] ) ? wp_unslash( $_POST['lignes'] ) : [];
@@ -2656,9 +2727,9 @@ final class BuyIt_Together {
 		}
 
 		if ( $sauvegarde ) {
-			self::empiler_sauvegarde( __( 'Category editor', 'buyit-together' ), $sauvegarde );
+			self::empiler_sauvegarde( __( 'Category editor', 'cross-sell-insights' ), $sauvegarde );
 		}
-		delete_transient( 'bit_analyse' );
+		delete_transient( 'csins_analyse' );
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- nonce checked above via check_admin_referer(); each element is sanitized on the next lines.
 		$retour = isset( $_POST['retour'] ) ? sanitize_text_field( wp_unslash( $_POST['retour'] ) ) : '';
@@ -2675,7 +2746,7 @@ final class BuyIt_Together {
 		$depuis = ( isset( $_POST['depuis'] ) && 'analyse' === $_POST['depuis'] ) ? 'analyse' : null;
 
 		wp_safe_redirect( add_query_arg( array_filter( [
-			'page'     => 'buyit-together',
+			'page'     => 'cross-sell-insights',
 			'onglet'   => $onglet,
 			'terme'    => $terme ?: null,
 			'produits' => $retour_produits ?: null,
@@ -2690,9 +2761,9 @@ final class BuyIt_Together {
 	/** Enregistre la liste des produits exclus des associations. */
 	public static function enregistrer_exclus(): void {
 		if ( ! current_user_can( 'manage_woocommerce' ) ) {
-			wp_die( esc_html__( 'Permission denied.', 'buyit-together' ) );
+			wp_die( esc_html__( 'Permission denied.', 'cross-sell-insights' ) );
 		}
-		check_admin_referer( 'bit_exclus' );
+		check_admin_referer( 'csins_exclus' );
 
 		// La clé existe toujours grâce au champ caché : une liste vidée se
 		// distingue ainsi d'un formulaire qui n'aurait rien envoyé.
@@ -2702,19 +2773,19 @@ final class BuyIt_Together {
 			: [];
 
 		// Autochargée : exclus() est appelée à l'affichage de chaque fiche produit.
-		update_option( 'bit_exclus', $ids, true );
-		delete_transient( 'bit_analyse' ); // le diagnostic repose sur ces paires
+		update_option( 'csins_exclus', $ids, true );
+		delete_transient( 'csins_analyse' ); // le diagnostic repose sur ces paires
 
-		wp_safe_redirect( admin_url( 'admin.php?page=buyit-together&onglet=analyse&exclus=1' ) );
+		wp_safe_redirect( admin_url( 'admin.php?page=cross-sell-insights&onglet=analyse&exclus=1' ) );
 		exit;
 	}
 
 	/** Enregistre la liste des fiches qui n'affichent aucune suggestion. */
 	public static function enregistrer_muets(): void {
 		if ( ! current_user_can( 'manage_woocommerce' ) ) {
-			wp_die( esc_html__( 'Permission denied.', 'buyit-together' ) );
+			wp_die( esc_html__( 'Permission denied.', 'cross-sell-insights' ) );
 		}
-		check_admin_referer( 'bit_muets' );
+		check_admin_referer( 'csins_muets' );
 
 		// Le champ caché garantit que la clé existe : une liste vidée doit se
 		// distinguer d'un formulaire qui n'aurait rien envoyé.
@@ -2723,19 +2794,19 @@ final class BuyIt_Together {
 			? array_values( array_unique( array_filter( array_map( 'absint', (array) wp_unslash( $_POST['muets'] ) ) ) ) )
 			: [];
 
-		update_option( 'bit_non_recommandes', $ids, false );
-		delete_transient( 'bit_analyse' ); // les recommandations en dépendent
+		update_option( 'csins_non_recommandes', $ids, false );
+		delete_transient( 'csins_analyse' ); // les recommandations en dépendent
 
-		wp_safe_redirect( admin_url( 'admin.php?page=buyit-together&onglet=analyse&muets=1' ) );
+		wp_safe_redirect( admin_url( 'admin.php?page=cross-sell-insights&onglet=analyse&muets=1' ) );
 		exit;
 	}
 
 	/** Enregistre le mode d'affichage choisi pour la fiche produit. */
 	public static function enregistrer_mode(): void {
 		if ( ! current_user_can( 'manage_woocommerce' ) ) {
-			wp_die( esc_html__( 'Permission denied.', 'buyit-together' ) );
+			wp_die( esc_html__( 'Permission denied.', 'cross-sell-insights' ) );
 		}
-		check_admin_referer( 'bit_mode' );
+		check_admin_referer( 'csins_mode' );
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- nonce checked above via check_admin_referer(); sanitized on the next line.
 		$mode = isset( $_POST['mode_fiche'] ) ? sanitize_key( wp_unslash( $_POST['mode_fiche'] ) ) : 'bloc';
@@ -2744,18 +2815,18 @@ final class BuyIt_Together {
 		}
 
 		// Autochargée : lue à chaque fiche produit, via mode_fiche().
-		update_option( 'bit_mode_fiche', $mode, true );
+		update_option( 'csins_mode_fiche', $mode, true );
 
-		wp_safe_redirect( admin_url( 'admin.php?page=buyit-together&onglet=reglages&mode=1' ) );
+		wp_safe_redirect( admin_url( 'admin.php?page=cross-sell-insights&onglet=reglages&mode=1' ) );
 		exit;
 	}
 
 	/** Enregistre l'apparence de la fenêtre d'ajout au panier. */
 	public static function enregistrer_style_modal(): void {
 		if ( ! current_user_can( 'manage_woocommerce' ) ) {
-			wp_die( esc_html__( 'Permission denied.', 'buyit-together' ) );
+			wp_die( esc_html__( 'Permission denied.', 'cross-sell-insights' ) );
 		}
-		check_admin_referer( 'bit_style_modal' );
+		check_admin_referer( 'csins_style_modal' );
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- nonce checked above via check_admin_referer(); each field is sanitized by modal_style() when read back.
 		$style = [
@@ -2772,18 +2843,18 @@ final class BuyIt_Together {
 		];
 
 		// Autochargée : lue à chaque fiche produit, via modal_style().
-		update_option( 'bit_modal_style', $style, true );
+		update_option( 'csins_modal_style', $style, true );
 
-		wp_safe_redirect( admin_url( 'admin.php?page=buyit-together&onglet=reglages&style=1' ) );
+		wp_safe_redirect( admin_url( 'admin.php?page=cross-sell-insights&onglet=reglages&style=1' ) );
 		exit;
 	}
 
 	/** Enregistre les règles saisies dans l'écran d'administration. */
 	public static function enregistrer_regles(): void {
 		if ( ! current_user_can( 'manage_woocommerce' ) ) {
-			wp_die( esc_html__( 'Permission denied.', 'buyit-together' ) );
+			wp_die( esc_html__( 'Permission denied.', 'cross-sell-insights' ) );
 		}
-		check_admin_referer( 'bit_regles' );
+		check_admin_referer( 'csins_regles' );
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- nonce checked above via check_admin_referer(); each element is sanitized on the next lines.
 		$brut   = isset( $_POST['regles'] ) && is_array( $_POST['regles'] ) ? wp_unslash( $_POST['regles'] ) : [];
@@ -2797,9 +2868,9 @@ final class BuyIt_Together {
 			}
 		}
 
-		update_option( 'bit_regles', $propre, true ); // lue à chaque fiche produit
+		update_option( 'csins_regles', $propre, true ); // lue à chaque fiche produit
 
-		wp_safe_redirect( admin_url( 'admin.php?page=buyit-together&onglet=fiche&regles=1' ) );
+		wp_safe_redirect( admin_url( 'admin.php?page=cross-sell-insights&onglet=fiche&regles=1' ) );
 		exit;
 	}
 
@@ -2814,9 +2885,9 @@ final class BuyIt_Together {
 	 */
 	public static function appliquer_masse(): void {
 		if ( ! current_user_can( 'manage_woocommerce' ) ) {
-			wp_die( esc_html__( 'Permission denied.', 'buyit-together' ) );
+			wp_die( esc_html__( 'Permission denied.', 'cross-sell-insights' ) );
 		}
-		check_admin_referer( 'bit_masse' );
+		check_admin_referer( 'csins_masse' );
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- nonce checked above via check_admin_referer(); each element is sanitized on the next lines.
 		$termes  = isset( $_POST['cibles_termes'] ) ? array_map( 'sanitize_text_field', (array) wp_unslash( $_POST['cibles_termes'] ) ) : [];
@@ -2825,7 +2896,7 @@ final class BuyIt_Together {
 		$mode    = ( isset( $_POST['mode'] ) && 'remplacer' === $_POST['mode'] ) ? 'remplacer' : 'ajouter';
 
 		if ( ! $croises || ( ! $termes && ! $directs ) ) {
-			wp_safe_redirect( admin_url( 'admin.php?page=buyit-together&onglet=panier&masse=vide' ) );
+			wp_safe_redirect( admin_url( 'admin.php?page=cross-sell-insights&onglet=panier&masse=vide' ) );
 			exit;
 		}
 
@@ -2853,7 +2924,7 @@ final class BuyIt_Together {
 
 		$cibles = array_unique( array_map( 'intval', $cibles ) );
 		if ( ! $cibles ) {
-			wp_safe_redirect( admin_url( 'admin.php?page=buyit-together&onglet=panier&masse=0' ) );
+			wp_safe_redirect( admin_url( 'admin.php?page=cross-sell-insights&onglet=panier&masse=0' ) );
 			exit;
 		}
 
@@ -2885,10 +2956,10 @@ final class BuyIt_Together {
 		}
 
 		if ( $sauvegarde ) {
-			self::empiler_sauvegarde( __( 'Bulk assignment', 'buyit-together' ), $sauvegarde );
+			self::empiler_sauvegarde( __( 'Bulk assignment', 'cross-sell-insights' ), $sauvegarde );
 		}
 
-		wp_safe_redirect( admin_url( 'admin.php?page=buyit-together&onglet=panier&masse=' . $modifies ) );
+		wp_safe_redirect( admin_url( 'admin.php?page=cross-sell-insights&onglet=panier&masse=' . $modifies ) );
 		exit;
 	}
 
@@ -2907,26 +2978,26 @@ final class BuyIt_Together {
 			'donnees' => $donnees,
 		];
 
-		$max = (int) apply_filters( 'bit_historique_max', 10 );
+		$max = (int) apply_filters( 'csins_historique_max', 10 );
 		if ( count( $historique ) > $max ) {
 			$historique = array_slice( $historique, -$max );
 		}
 
-		update_option( 'bit_historique', $historique, false );
+		update_option( 'csins_historique', $historique, false );
 	}
 
 	/** Historique des modifications de ventes croisées, de la plus ancienne à la plus récente. */
 	private static function historique(): array {
-		$h = get_option( 'bit_historique', [] );
+		$h = get_option( 'csins_historique', [] );
 		return is_array( $h ) ? array_values( $h ) : [];
 	}
 
 	/** Restaure les ventes croisées telles qu'elles étaient avant la dernière opération. */
 	public static function annuler_masse(): void {
 		if ( ! current_user_can( 'manage_woocommerce' ) ) {
-			wp_die( esc_html__( 'Permission denied.', 'buyit-together' ) );
+			wp_die( esc_html__( 'Permission denied.', 'cross-sell-insights' ) );
 		}
-		check_admin_referer( 'bit_annuler' );
+		check_admin_referer( 'csins_annuler' );
 
 		$historique = self::historique();
 		$derniere   = array_pop( $historique );
@@ -2943,22 +3014,22 @@ final class BuyIt_Together {
 			}
 		}
 
-		update_option( 'bit_historique', array_values( $historique ), false );
-		delete_transient( 'bit_analyse' );
+		update_option( 'csins_historique', array_values( $historique ), false );
+		delete_transient( 'csins_analyse' );
 
-		wp_safe_redirect( admin_url( 'admin.php?page=buyit-together&onglet=panier&annule=' . $restaures ) );
+		wp_safe_redirect( admin_url( 'admin.php?page=cross-sell-insights&onglet=panier&annule=' . $restaures ) );
 		exit;
 	}
 
 	public static function recalcul_manuel(): void {
 		if ( ! current_user_can( 'manage_woocommerce' ) ) {
-			wp_die( esc_html__( 'Permission denied.', 'buyit-together' ) );
+			wp_die( esc_html__( 'Permission denied.', 'cross-sell-insights' ) );
 		}
-		check_admin_referer( 'bit_recalcul' );
+		check_admin_referer( 'csins_recalcul' );
 
 		self::recalculer();
 
-		wp_safe_redirect( admin_url( 'admin.php?page=buyit-together&onglet=analyse&recalcul=1' ) );
+		wp_safe_redirect( admin_url( 'admin.php?page=cross-sell-insights&onglet=analyse&recalcul=1' ) );
 		exit;
 	}
 }
@@ -2973,6 +3044,6 @@ add_action( 'before_woocommerce_init', static function (): void {
 	}
 } );
 
-add_action( 'plugins_loaded', [ 'BuyIt_Together', 'init' ] );
-register_activation_hook( __FILE__, [ 'BuyIt_Together', 'activation' ] );
-register_deactivation_hook( __FILE__, [ 'BuyIt_Together', 'desactivation' ] );
+add_action( 'plugins_loaded', [ 'Cross_Sell_Insights', 'init' ] );
+register_activation_hook( __FILE__, [ 'Cross_Sell_Insights', 'activation' ] );
+register_deactivation_hook( __FILE__, [ 'Cross_Sell_Insights', 'desactivation' ] );

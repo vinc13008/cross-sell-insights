@@ -25,7 +25,7 @@ de façon fiable par le moteur SVG interne d'ImageMagick :
 ```sh
 magick banner.svg \
   -font "/System/Library/Fonts/Avenir Next.ttc" -pointsize 92 -fill '#f6f7f7' \
-  -annotate +430+250 'BuyIt Together' \
+  -annotate +430+250 'Cross-Sell Insights' \
   -font "/System/Library/Fonts/Helvetica.ttc" -pointsize 36 -fill '#a7aaad' \
   -annotate +434+312 'Suggestions built from your real order history' \
   banner-1544x500.png
