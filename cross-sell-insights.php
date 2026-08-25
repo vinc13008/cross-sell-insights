@@ -899,8 +899,17 @@ final class Cross_Sell_Insights {
 			.csins-modal__ajouter[disabled] { opacity: .55; cursor: default; transform: none; }
 			.csins-modal__pied { display: flex; gap: 1em; align-items: center; justify-content: center; flex-wrap: wrap;
 				padding-top: 1em; border-top: 1px solid color-mix(in srgb, var(--csins-texte, #1d2327) 12%, transparent); }
-			.csins-modal__continuer { background: none; border: 0; text-decoration: underline; cursor: pointer;
-				color: inherit; font-size: .9em; padding: 0; opacity: .75; }
+			/* « Continuer mes achats » est un <button>, « Voir le panier » un lien :
+			   le thème hôte habille le premier et pas le second, et leurs boîtes
+			   cessent de s'aligner. Ce lien déguisé n'a pas la taille des autres
+			   boutons — il ne doit pas en avoir l'allure — mais il lui faut les
+			   mêmes remises à zéro pour partager leur ligne. */
+			.csins-modal__continuer { background: none !important; border: 0; text-decoration: underline;
+				cursor: pointer; color: inherit; opacity: .75;
+				margin: 0 !important; padding: 0 !important; min-height: 0 !important; height: auto !important;
+				font-family: inherit !important; font-size: .9em !important; font-weight: 400 !important;
+				line-height: 1.15 !important; text-transform: none !important; letter-spacing: normal !important;
+				border-radius: 0 !important; }
 			.csins-modal__continuer:hover { opacity: 1; }
 			@media (prefers-reduced-motion: reduce) { .csins-modal { transition: none; } }
 			.csins-avertir { position: fixed; bottom: 1.2em; right: 1.2em; left: auto; max-width: 320px;
