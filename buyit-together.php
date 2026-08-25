@@ -3,7 +3,7 @@
  * Plugin Name:       BuyIt Together
  * Plugin URI:        https://github.com/vinc13008/buyit-together
  * Description:       Shows on each product page the parts customers actually bought with it, deduced from your order history. No per-product setup: associations are recalculated weekly.
- * Version:           1.3.3
+ * Version:           1.1.1
  * Requires at least: 6.0
  * Requires PHP:      8.0
  * Author:            POWERLOOP
@@ -72,11 +72,6 @@ final class BuyIt_Together {
 		}
 	}
 
-	/**
-	 * À l'activation, on amorce la règle la plus évidente des données :
-	 * le kit d'outils sur les pièces qui demandent un démontage. Elle reste
-	 * entièrement modifiable ou supprimable depuis l'écran de réglages.
-	 */
 	/**
 	 * Programme le premier calcul.
 	 *
@@ -175,6 +170,27 @@ final class BuyIt_Together {
 		$compte  = $analyse['paires'];
 
 		if ( ! $compte ) {
+			// Le calcul a bien tourné et n'a rien trouvé : on l'enregistre tel
+			// quel, sinon l'écran continuerait d'afficher le bilan de la fois
+			// d'avant et l'administrateur croirait son recalcul sans effet.
+			// Le nombre de commandes vues est conservé : « 0 produit associé, à
+			// partir de 12 commandes » dit bien autre chose que « 0 sur 0 » —
+			// dans le premier cas les commandes existent mais ne contiennent
+			// aucune paire, dans le second il n'y a rien à analyser du tout.
+			//
+			// Les associations déjà calculées, elles, sont laissées en place.
+			// Un résultat vide vient plus souvent d'une cause passagère ou
+			// externe — fenêtre d'analyse dépassée, produits exclus, stockage
+			// des commandes illisible (voir stockage_hpos()) — que d'une
+			// disparition réelle des données. Les effacer sur cette seule base
+			// détruirait un travail reconstituable uniquement par un nouveau
+			// calcul réussi.
+			update_option( 'bit_dernier_calcul', [
+				'date'     => current_time( 'mysql' ),
+				'produits' => 0,
+				'paniers'  => (int) $analyse['commandes'],
+			], false );
+
 			return 0;
 		}
 
@@ -326,20 +342,6 @@ final class BuyIt_Together {
 	}
 
 	/**
-	 * Fenêtre déclenchée à l'ajout au panier, avec les compagnons du produit.
-	 *
-	 * L'ajout lui-même passe par l'API REST publique du panier (Store API),
-	 * appelée en JavaScript : c'est la seule manière de garder le client sur la
-	 * page pour lui montrer la fenêtre, plutôt que de subir le rechargement
-	 * complet qu'un simple <form method="post"> déclencherait par défaut.
-	 *
-	 * L'interception du formulaire se fait en phase de capture, sur le document
-	 * plutôt que sur le formulaire lui-même : un gestionnaire posé par le thème
-	 * s'exécute forcément après, quel que soit l'ordre de chargement des scripts,
-	 * et stopImmediatePropagation() l'empêche de s'exécuter à son tour — sans
-	 * cela, le produit s'ajouterait deux fois.
-	 */
-	/**
 	 * CSS de la fenêtre, partagée entre le vrai modal côté client et
 	 * l'aperçu de l'écran de réglages — sans quoi les deux auraient fini par
 	 * diverger, et l'aperçu aurait menti sur le rendu réel.
@@ -403,17 +405,23 @@ final class BuyIt_Together {
 			.bit-modal__liste--colonnes .bit-modal__nom { display: -webkit-box; -webkit-line-clamp: 2;
 				-webkit-box-orient: vertical; overflow: hidden; min-height: calc(.8em * 1.3 * 2); }
 			.bit-modal__liste--colonnes .bit-modal__ajouter, .bit-modal__liste--colonnes .bit-modal__voir {
-				width: 100%; margin-top: auto; }
+				margin-top: auto; }
 			.bit-modal__item img { display: block; object-fit: cover; flex: 0 0 auto; width: 56px; height: 56px;
 				border-radius: max(4px, calc(var(--bit-rayon, 14px) * .5)); }
 			.bit-modal__nom { font-size: .8em; line-height: 1.3; }
 			.bit-modal__prix { display: block; font-size: .8em; font-weight: 700; color: var(--bit-accent, #1d2327);
 				margin-top: .15em; }
 			.bit-modal__ajouter, .bit-modal__voir, .bit-modal__pied .button {
-				box-sizing: border-box; flex: 0 0 auto; white-space: nowrap; border: 0; cursor: pointer;
-				text-decoration: none; display: inline-block; text-align: center; min-width: 118px;
+				/* Largeur figée plutôt qu'un étirement à 100% : sur certains thèmes,
+				   un lien (« Voir le produit ») ne s'étire pas comme un <button>
+				   (« Ajouter ») même à spécificité égale. Une valeur fixe, identique
+				   et forcée sur les deux évite d'avoir à deviner lequel des deux le
+				   thème respecte. */
+				box-sizing: border-box !important; flex: 0 0 auto; white-space: nowrap; border: 0; cursor: pointer;
+				text-decoration: none; display: inline-block !important; text-align: center;
+				width: 118px !important; min-width: 118px;
 				background: var(--bit-accent, #1d2327); color: #fff; font-weight: 600;
-				font-size: .74em; padding: .5em .7em; border-radius: max(4px, calc(var(--bit-rayon, 14px) * .55));
+				font-size: .74em !important; padding: .5em .7em !important; border-radius: max(4px, calc(var(--bit-rayon, 14px) * .55));
 				transition: transform 140ms ease-out, opacity 140ms ease; }
 			.bit-modal__ajouter:hover, .bit-modal__voir:hover, .bit-modal__pied .button:hover { opacity: .88; }
 			.bit-modal__ajouter:active, .bit-modal__voir:active, .bit-modal__pied .button:active { transform: scale(.96); }
@@ -431,6 +439,20 @@ final class BuyIt_Together {
 		return ob_get_clean();
 	}
 
+	/**
+	 * Fenêtre déclenchée à l'ajout au panier, avec les compagnons du produit.
+	 *
+	 * L'ajout lui-même passe par l'API REST publique du panier (Store API),
+	 * appelée en JavaScript : c'est la seule manière de garder le client sur la
+	 * page pour lui montrer la fenêtre, plutôt que de subir le rechargement
+	 * complet qu'un simple <form method="post"> déclencherait par défaut.
+	 *
+	 * L'interception du formulaire se fait en phase de capture, sur le document
+	 * plutôt que sur le formulaire lui-même : un gestionnaire posé par le thème
+	 * s'exécute forcément après, quel que soit l'ordre de chargement des scripts,
+	 * et stopImmediatePropagation() l'empêche de s'exécuter à son tour — sans
+	 * cela, le produit s'ajouterait deux fois.
+	 */
 	private static function afficher_modal( WC_Product $produit, array $produits ): void {
 		static $deja_affiche = false;
 		if ( $deja_affiche ) {
@@ -544,9 +566,14 @@ final class BuyIt_Together {
 			// Les deux formes sont fournies telles quelles, avec leur « %d » ; la
 			// valeur réelle n'est connue qu'à l'ajout, côté navigateur — c'est donc
 			// le script qui choisit laquelle utiliser et fait le remplacement.
-			/* translators: %d: number of items in the cart (singular form) */
+			// Un seul commentaire de traduction, partagé : les deux appels ci-dessous
+			// extraient la même paire singulier/msgid_plural (seul $number diffère,
+			// ce qui ne fait pas partie de la clé de traduction) — deux commentaires
+			// différents sur la même entrée ne feraient qu'induire l'outil de
+			// traduction en erreur.
+			/* translators: %d: number of items in the cart */
 			$libelle_panier_un = _n( '%d item in your cart.', '%d items in your cart.', 1, 'buyit-together' );
-			/* translators: %d: number of items in the cart (plural form) */
+			/* translators: %d: number of items in the cart */
 			$libelle_panier_plusieurs = _n( '%d item in your cart.', '%d items in your cart.', 2, 'buyit-together' );
 			?>
 			var texteUn    = '<?php echo esc_js( $libelle_panier_un ); ?>';
@@ -787,6 +814,27 @@ final class BuyIt_Together {
 	 */
 	private static function store_api_disponible(): bool {
 		return defined( 'WC_VERSION' ) && version_compare( WC_VERSION, '8.3', '>=' );
+	}
+
+	/**
+	 * Le site range-t-il ses commandes dans les tables HPOS ?
+	 *
+	 * Tout le calcul lit `wp_wc_orders` directement. Sur un site resté au
+	 * stockage classique (commandes dans `wp_posts`), cette table existe mais
+	 * reste vide : la requête aboutit, ne remonte rien, et l'extension conclut
+	 * à tort « pas assez de commandes ». Une réponse fausse et silencieuse est
+	 * pire qu'une absence de réponse — d'où cette détection, qui sert à le dire
+	 * à l'administrateur plutôt qu'à le laisser chercher.
+	 *
+	 * En cas de doute (API WooCommerce absente), on répond « oui » : mieux vaut
+	 * se taire que d'alarmer à tort un site qui fonctionne.
+	 */
+	private static function stockage_hpos(): bool {
+		$util = '\\Automattic\\WooCommerce\\Utilities\\OrderUtil';
+		if ( ! class_exists( $util ) || ! method_exists( $util, 'custom_orders_table_usage_is_enabled' ) ) {
+			return true;
+		}
+		return (bool) $util::custom_orders_table_usage_is_enabled();
 	}
 
 	/**
@@ -1233,6 +1281,17 @@ final class BuyIt_Together {
 				esc_html( $message )
 			);
 		}
+
+		// Averti en dernier, et non masquable : contrairement aux messages
+		// ci-dessus qui confirment une action, celui-ci explique pourquoi tous
+		// les chiffres de l'écran valent zéro. Le masquer reviendrait à laisser
+		// l'administrateur devant un diagnostic faux sans explication.
+		if ( ! self::stockage_hpos() ) {
+			printf(
+				'<div class="notice notice-warning"><p>%s</p></div>',
+				esc_html__( 'This site still stores its orders the classic way. BuyIt Together reads the newer high-performance order tables, which are empty here — so the analysis below finds no orders and no associations, however many sales you have. Switching WooCommerce to high-performance order storage (WooCommerce → Settings → Advanced → Features) makes the numbers real.', 'buyit-together' )
+			);
+		}
 	}
 
 	/**
@@ -1350,7 +1409,17 @@ final class BuyIt_Together {
 	private static function onglet_analyse(): void {
 		$info = get_option( 'bit_dernier_calcul', [] );
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only navigation parameter, no state change.
-		$a    = self::analyser( isset( $_GET['analyser'] ) );
+		// Le lien « Relancer l'analyse » porte un nonce : il déclenche une
+		// agrégation sur tout l'historique des commandes, en contournant le cache
+		// d'une heure. Sans jeton, n'importe quelle page tierce pourrait faire
+		// relancer ce calcul à un administrateur de passage, autant de fois
+		// qu'elle le veut. Un lien périmé retombe simplement sur l'analyse en
+		// cache — aucune erreur affichée.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- nonce vérifié juste en dessous ; son absence ne fait que retomber sur le cache.
+		$forcer = isset( $_GET['analyser'] )
+			&& isset( $_GET['_wpnonce'] )
+			&& wp_verify_nonce( sanitize_key( wp_unslash( $_GET['_wpnonce'] ) ), 'bit_analyser' );
+		$a    = self::analyser( $forcer );
 		$taux = $a['total'] ? round( $a['confirmees'] * 100 / $a['total'] ) : 0;
 
 		// Seuils et vocabulaire de l'état : la couleur ne dit rien seule.
@@ -1402,7 +1471,7 @@ final class BuyIt_Together {
 					); ?>
 				</p>
 				<p class="bit-jauge__note">
-					<a href="<?php echo esc_url( admin_url( 'admin.php?page=buyit-together&onglet=analyse&analyser=1' ) ); ?>">
+					<a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=buyit-together&onglet=analyse&analyser=1' ), 'bit_analyser' ) ); ?>">
 						<?php esc_html_e( "Run the analysis again", 'buyit-together' ); ?>
 					</a>
 				</p>
@@ -1612,9 +1681,11 @@ final class BuyIt_Together {
 			// script qui choisit laquelle utiliser et fait lui-même le remplacement.
 			// Une chaîne français comme « sélectionné » prend un accord au pluriel
 			// que l'anglais ne marque pas — les figer à l'avance aurait été faux.
-			/* translators: %d: number of selected rows (singular form) */
+			// Commentaire de traduction partagé, pour la même raison qu'au-dessus :
+			// les deux appels extraient la même entrée singulier/pluriel.
+			/* translators: %d: number of selected rows */
 			$libelle_un        = _n( '%d selected', '%d selected', 1, 'buyit-together' );
-			/* translators: %d: number of selected rows (plural form) */
+			/* translators: %d: number of selected rows */
 			$libelle_plusieurs = _n( '%d selected', '%d selected', 2, 'buyit-together' );
 			?>
 			<script>
@@ -1810,7 +1881,16 @@ final class BuyIt_Together {
 						<p class="bit-modal__ajoute">
 							<span class="bit-modal__coche" aria-hidden="true">&#10003;</span>
 							<span id="bit-previsu-message"><?php echo esc_html( $style['message_ajoute'] ); ?></span>
-							<span class="bit-modal__compte">1 item in your cart.</span>
+							<span class="bit-modal__compte"><?php
+							// Même paire singulier/pluriel que dans la fenêtre réelle (voir
+							// afficher_modal()) : un seul msgid partagé pour les traducteurs,
+							// plutôt qu'un texte d'exemple figé en anglais.
+							echo esc_html( sprintf(
+								/* translators: %d: number of items in the cart */
+								_n( '%d item in your cart.', '%d items in your cart.', 1, 'buyit-together' ),
+								1
+							) );
+						?></span>
 						</p>
 						<h3 class="bit-modal__titre" id="bit-previsu-titre"><?php echo esc_html( $style['titre'] ); ?></h3>
 						<ul class="bit-modal__liste bit-modal__liste--<?php echo esc_attr( $style['disposition'] ); ?>" id="bit-previsu-liste">

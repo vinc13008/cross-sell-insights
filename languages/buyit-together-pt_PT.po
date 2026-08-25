@@ -1,15 +1,15 @@
-# Traduction de BuyIt Together en Français.
+# Traduction de BuyIt Together en Português.
 # This file is distributed under the GPL-2.0-or-later.
 msgid ""
 msgstr ""
 "Project-Id-Version: BuyIt Together 1.1.1\n"
 "Report-Msgid-Bugs-To: https://github.com/vinc13008/buyit-together\n"
-"Language-Team: Français\n"
-"Language: fr_FR\n"
+"Language-Team: Português\n"
+"Language: pt_PT\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Domain: buyit-together\n"
 
 #. Plugin Name of the plugin
@@ -28,7 +28,7 @@ msgstr ""
 #. Description of the plugin
 #: buyit-together.php
 msgid "Shows on each product page the parts customers actually bought with it, deduced from your order history. No per-product setup: associations are recalculated weekly."
-msgstr "Affiche sur chaque fiche produit les pièces que les clients ont réellement achetées avec, déduites de votre historique de commandes. Aucun réglage produit par produit : les associations sont recalculées chaque semaine."
+msgstr "Mostra em cada página de produto as peças que os clientes compraram efetivamente com ele, deduzidas do teu histórico de encomendas. Sem configuração por produto: as associações são recalculadas semanalmente."
 
 #. Author of the plugin
 #: buyit-together.php
@@ -38,31 +38,31 @@ msgstr ""
 #: buyit-together.php:306
 #: buyit-together.php:861
 msgid "Frequently bought with this part"
-msgstr "Souvent commandé avec cette pièce"
+msgstr "Comprado frequentemente com esta peça"
 
 #: buyit-together.php:488
 msgid "Close"
-msgstr "Fermer"
+msgstr "Fechar"
 
 #: buyit-together.php:511
 #: buyit-together.php:1904
 msgid "Add"
-msgstr "Ajouter"
+msgstr "Adicionar"
 
 #: buyit-together.php:515
 #: buyit-together.php:2431
 msgid "View product"
-msgstr "Voir le produit"
+msgstr "Ver produto"
 
 #: buyit-together.php:522
 #: buyit-together.php:1909
 msgid "View cart"
-msgstr "Voir le panier"
+msgstr "Ver carrinho"
 
 #: buyit-together.php:523
 #: buyit-together.php:1910
 msgid "Continue shopping"
-msgstr "Continuer les achats"
+msgstr "Continuar a comprar"
 
 #. translators: %d: number of items in the cart
 #: buyit-together.php:575
@@ -71,32 +71,32 @@ msgstr "Continuer les achats"
 #, php-format
 msgid "%d item in your cart."
 msgid_plural "%d items in your cart."
-msgstr[0] "%d article dans votre panier."
-msgstr[1] "%d articles dans votre panier."
+msgstr[0] "%d artigo no teu carrinho."
+msgstr[1] "%d artigos no teu carrinho."
 
 #: buyit-together.php:581
 msgid "Could not add to cart. Please try again."
-msgstr "Impossible d'ajouter au panier. Veuillez réessayer."
+msgstr "Não foi possível adicionar ao carrinho. Tenta novamente."
 
 #: buyit-together.php:669
 msgid "Adding…"
-msgstr "Ajout en cours…"
+msgstr "A adicionar…"
 
 #: buyit-together.php:699
 msgid "Added"
-msgstr "Ajouté"
+msgstr "Adicionado"
 
 #: buyit-together.php:862
 msgid "Added to your cart."
-msgstr "Ajouté à votre panier."
+msgstr "Adicionado ao teu carrinho."
 
 #: buyit-together.php:915
 msgid "Tag"
-msgstr "Étiquette"
+msgstr "Etiqueta"
 
 #: buyit-together.php:915
 msgid "Category"
-msgstr "Catégorie"
+msgstr "Categoria"
 
 #: buyit-together.php:1043
 #: buyit-together.php:2583
@@ -109,57 +109,57 @@ msgstr "Catégorie"
 #: buyit-together.php:2918
 #: buyit-together.php:2946
 msgid "Permission denied."
-msgstr "Permission refusée."
+msgstr "Permissão negada."
 
 #: buyit-together.php:1075
 msgid "Recommendations applied"
-msgstr "Recommandations appliquées"
+msgstr "Recomendações aplicadas"
 
 #: buyit-together.php:1124
 msgid "Analysis"
-msgstr "Analyse"
+msgstr "Análise"
 
 #: buyit-together.php:1128
 msgid "Product page suggestions"
-msgstr "Suggestions sur la fiche produit"
+msgstr "Sugestões da página de produto"
 
 #: buyit-together.php:1132
 msgid "Cart cross-sells"
-msgstr "Ventes croisées du panier"
+msgstr "Vendas cruzadas do carrinho"
 
 #: buyit-together.php:1136
 #: buyit-together.php:2387
 msgid "Upsells"
-msgstr "Montées en gamme"
+msgstr "Vendas superiores"
 
 #: buyit-together.php:1140
 #: buyit-together.php:2650
 msgid "Category editor"
-msgstr "Éditeur par catégorie"
+msgstr "Editor de categorias"
 
 #: buyit-together.php:1144
 msgid "Settings"
-msgstr "Réglages"
+msgstr "Definições"
 
 #: buyit-together.php:1173
 msgid "(deleted product)"
-msgstr "(produit supprimé)"
+msgstr "(produto eliminado)"
 
 #: buyit-together.php:1188
 msgid "Edit its suggestions and cross-sells"
-msgstr "Modifier ses suggestions et ses ventes croisées"
+msgstr "Editar as suas sugestões e vendas cruzadas"
 
 #. translators: %d: number of recommendations applied
 #: buyit-together.php:1211
 #, php-format
 msgid "%d recommendation applied to your cross-sells."
 msgid_plural "%d recommendations applied to your cross-sells."
-msgstr[0] "%d association appliquée à vos ventes croisées."
-msgstr[1] "%d associations appliquées à vos ventes croisées."
+msgstr[0] "%d recomendação aplicada às tuas vendas cruzadas."
+msgstr[1] "%d recomendações aplicadas às tuas vendas cruzadas."
 
 #: buyit-together.php:1212
 msgid "Nothing to apply: the selected pairs were already configured."
-msgstr "Rien à appliquer : les paires sélectionnées étaient déjà configurées."
+msgstr "Nada a aplicar: os pares selecionados já estavam configurados."
 
 #. translators: %d: number of products updated
 #: buyit-together.php:1220
@@ -167,233 +167,233 @@ msgstr "Rien à appliquer : les paires sélectionnées étaient déjà configur�
 #, php-format
 msgid "%d product updated."
 msgid_plural "%d products updated."
-msgstr[0] "%d produit mis à jour."
-msgstr[1] "%d produits mis à jour."
+msgstr[0] "%d produto atualizado."
+msgstr[1] "%d produtos atualizados."
 
 #: buyit-together.php:1225
 msgid "Exclusions saved."
-msgstr "Exclusions enregistrées."
+msgstr "Exclusões guardadas."
 
 #: buyit-together.php:1230
 msgid "Saved. These product pages are out of the recommendations table."
-msgstr "Enregistré. Ces fiches produit sont retirées du tableau de recommandations."
+msgstr "Guardado. Estas páginas de produto ficam fora da tabela de recomendações."
 
 #: buyit-together.php:1235
 msgid "Rules saved."
-msgstr "Règles enregistrées."
+msgstr "Regras guardadas."
 
 #: buyit-together.php:1240
 msgid "Saved."
-msgstr "Enregistré."
+msgstr "Guardado."
 
 #: buyit-together.php:1245
 msgid "Window appearance saved."
-msgstr "Apparence de la fenêtre enregistrée."
+msgstr "Aspeto da janela guardado."
 
 #: buyit-together.php:1253
 msgid "Choose at least one cross-sell product to add, and a category, tag or product to apply it to."
-msgstr "Choisissez au moins un produit à ajouter en vente croisée, et une catégorie, une étiquette ou des produits auxquels l'appliquer."
+msgstr "Escolhe pelo menos um produto de venda cruzada para adicionar, e uma categoria, etiqueta ou produto a que o aplicar."
 
 #: buyit-together.php:1255
 msgid "No product matched your selection."
-msgstr "Aucun produit ne correspond à votre sélection."
+msgstr "Nenhum produto corresponde à tua seleção."
 
 #. translators: %d: number of products restored
 #: buyit-together.php:1269
 #, php-format
 msgid "%d product restored to its previous cross-sells."
 msgid_plural "%d products restored to their previous cross-sells."
-msgstr[0] "%d produit restauré à ses ventes croisées précédentes."
-msgstr[1] "%d produits restaurés à leurs ventes croisées précédentes."
+msgstr[0] "%d produto reposto nas suas vendas cruzadas anteriores."
+msgstr[1] "%d produtos repostos nas suas vendas cruzadas anteriores."
 
 #: buyit-together.php:1270
 msgid "Nothing to undo."
-msgstr "Rien à annuler."
+msgstr "Nada a anular."
 
 #: buyit-together.php:1275
 msgid "Calculation refreshed — see the numbers below."
-msgstr "Calcul actualisé — les chiffres ci-dessous sont à jour."
+msgstr "Cálculo atualizado — vê os números abaixo."
 
 #: buyit-together.php:1292
 msgid "This site still stores its orders the classic way. BuyIt Together reads the newer high-performance order tables, which are empty here — so the analysis below finds no orders and no associations, however many sales you have. Switching WooCommerce to high-performance order storage (WooCommerce → Settings → Advanced → Features) makes the numbers real."
-msgstr "Ce site range encore ses commandes à l'ancienne manière. BuyIt Together lit les nouvelles tables de commandes haute performance, vides ici — c'est pourquoi l'analyse ci-dessous ne trouve aucune commande ni aucune association, quel que soit votre volume de ventes. Basculer WooCommerce sur le stockage haute performance des commandes (WooCommerce → Réglages → Avancé → Fonctionnalités) rend les chiffres réels."
+msgstr "Este site ainda guarda as suas encomendas à maneira clássica. O BuyIt Together lê as novas tabelas de encomendas de alto desempenho, que aqui estão vazias — por isso a análise abaixo não encontra nenhuma encomenda nem nenhuma associação, por muitas vendas que tenhas. Mudar o WooCommerce para o armazenamento de encomendas de alto desempenho (WooCommerce → Definições → Avançado → Funcionalidades) torna os números reais."
 
 #: buyit-together.php:1428
 msgid "No cross-sells configured"
-msgstr "Aucune vente croisée configurée"
+msgstr "Sem vendas cruzadas configuradas"
 
 #: buyit-together.php:1431
 msgid "Configuration unrelated to your sales"
-msgstr "Configuration sans rapport avec vos ventes"
+msgstr "Configuração sem relação com as tuas vendas"
 
 #: buyit-together.php:1434
 msgid "Weak match"
-msgstr "Correspondance faible"
+msgstr "Correspondência fraca"
 
 #: buyit-together.php:1437
 msgid "Partial match"
-msgstr "Correspondance partielle"
+msgstr "Correspondência parcial"
 
 #: buyit-together.php:1440
 msgid "Configuration matches your sales"
-msgstr "Configuration conforme à vos ventes"
+msgstr "A configuração corresponde às tuas vendas"
 
 #: buyit-together.php:1444
 msgid "What your sales say. Nothing to configure here: the suggested corrections can be applied, but configuration happens in the other tabs."
-msgstr "Ce que disent vos ventes. Aucun réglage ici : les corrections proposées sont applicables, mais la configuration se fait dans les autres onglets."
+msgstr "O que as tuas vendas dizem. Aqui não há nada a configurar: podes aplicar as correções sugeridas, mas a configuração faz-se nos outros separadores."
 
 #: buyit-together.php:1450
 msgid "of your cross-sells match a real purchase"
-msgstr "de vos ventes croisées correspondent à un achat réel"
+msgstr "das tuas vendas cruzadas correspondem a uma compra real"
 
 #. translators: 1: confirmed associations, 2: configured cross-sells, 3: orders analysed
 #: buyit-together.php:1469
 #, php-format
 msgid "%1$d associations confirmed out of %2$d configured, measured across %3$d orders from the last 12 months."
-msgstr "%1$d associations confirmées sur %2$d configurées, mesurées sur %3$d commandes des 12 derniers mois."
+msgstr "%1$d associações confirmadas em %2$d configuradas, medidas em %3$d encomendas dos últimos 12 meses."
 
 #: buyit-together.php:1475
 msgid "Run the analysis again"
-msgstr "Relancer l'analyse"
+msgstr "Executar a análise de novo"
 
 #. translators: %d: number of products excluded from suggestions
 #: buyit-together.php:1509
 #, php-format
 msgid "%d product is never suggested elsewhere."
 msgid_plural "%d products are never suggested elsewhere."
-msgstr[0] "%d produit n'est jamais proposé ailleurs."
-msgstr[1] "%d produits ne sont jamais proposés ailleurs."
+msgstr[0] "%d produto nunca é sugerido noutro sítio."
+msgstr[1] "%d produtos nunca são sugeridos noutro sítio."
 
 #. translators: %d: number of product pages excluded from recommendations
 #: buyit-together.php:1516
 #, php-format
 msgid "%d product page is excluded from recommendations."
 msgid_plural "%d product pages are excluded from recommendations."
-msgstr[0] "%d fiche est retirée des recommandations."
-msgstr[1] "%d fiches sont retirées des recommandations."
+msgstr[0] "%d página de produto está excluída das recomendações."
+msgstr[1] "%d páginas de produto estão excluídas das recomendações."
 
 #: buyit-together.php:1532
 msgid "Cross-sells configured"
-msgstr "Ventes croisées configurées"
+msgstr "Vendas cruzadas configuradas"
 
 #: buyit-together.php:1536
 msgid "Confirmed by your sales"
-msgstr "Confirmées par vos ventes"
+msgstr "Confirmadas pelas tuas vendas"
 
 #: buyit-together.php:1540
 msgid "Corrections suggested"
-msgstr "Corrections proposées"
+msgstr "Correções sugeridas"
 
 #: buyit-together.php:1544
 msgid "Products with suggestions"
-msgstr "Produits avec suggestions"
+msgstr "Produtos com sugestões"
 
 #: buyit-together.php:1549
 msgid "Association calculation"
-msgstr "Calcul des associations"
+msgstr "Cálculo das associações"
 
 #: buyit-together.php:1550
 msgid "Counts product pairs appearing in the same order over the last 12 months. Recalculated weekly, and feeds the product page suggestions."
-msgstr "Compte les couples de produits apparaissant dans une même commande sur les 12 derniers mois. Recalculé chaque semaine, et alimente les suggestions de la fiche produit."
+msgstr "Conta os pares de produtos que aparecem na mesma encomenda nos últimos 12 meses. É recalculado semanalmente e alimenta as sugestões da página de produto."
 
 #: buyit-together.php:1553
 msgid "Last calculation:"
-msgstr "Dernier calcul :"
+msgstr "Último cálculo:"
 
 #. translators: 1: products with associations, 2: orders the calculation used
 #: buyit-together.php:1557
 #, php-format
 msgid "%1$d products associated, from %2$d orders."
-msgstr "%1$d produits associés, à partir de %2$d commandes."
+msgstr "%1$d produtos associados, a partir de %2$d encomendas."
 
 #: buyit-together.php:1563
 msgid "No calculation has been run yet."
-msgstr "Aucun calcul effectué pour le moment."
+msgstr "Ainda não foi executado nenhum cálculo."
 
 #: buyit-together.php:1568
 msgid "Recalculate now"
-msgstr "Recalculer maintenant"
+msgstr "Recalcular agora"
 
 #: buyit-together.php:1578
 msgid "Recalculating…"
-msgstr "Calcul en cours…"
+msgstr "A recalcular…"
 
 #: buyit-together.php:1583
 msgid "Products never to suggest elsewhere"
-msgstr "Produits à ne jamais proposer ailleurs"
+msgstr "Produtos a nunca sugerir noutro sítio"
 
 #: buyit-together.php:1584
 msgid "A consumable, a free gift or an end-of-life part shows up in almost every order: it becomes the companion of your whole catalogue without saying anything useful. Products listed here are removed from the calculation and never appear in suggestions, even if they were added by hand or by a rule."
-msgstr "Un consommable, un article offert ou une pièce en fin de vie se retrouve dans presque toutes les commandes : il devient le compagnon de tout le catalogue sans rien dire d'utile. Les produits listés ici sont retirés du calcul et ne s'affichent jamais dans les suggestions, même s'ils ont été ajoutés à la main ou par une règle."
+msgstr "Um consumível, um brinde ou uma peça em fim de vida aparece em quase todas as encomendas: torna-se o acompanhante de todo o teu catálogo sem dizer nada de útil. Os produtos listados aqui são retirados do cálculo e nunca aparecem nas sugestões, mesmo que tenham sido adicionados à mão ou por uma regra."
 
 #: buyit-together.php:1591
 msgid "Search for a product to exclude…"
-msgstr "Rechercher un produit à exclure…"
+msgstr "Procurar um produto a excluir…"
 
 #: buyit-together.php:1598
 msgid "Exclusion takes effect immediately on product pages. The ranking and recommendations below update at the next calculation."
-msgstr "L'exclusion prend effet immédiatement sur les fiches produit. Le classement et les recommandations ci-dessous se mettent à jour au prochain calcul."
+msgstr "A exclusão tem efeito imediato nas páginas de produto. A classificação e as recomendações abaixo são atualizadas no próximo cálculo."
 
 #: buyit-together.php:1599
 msgid "Save exclusions"
-msgstr "Enregistrer les exclusions"
+msgstr "Guardar exclusões"
 
 #: buyit-together.php:1602
 msgid "Product pages to stop recommending"
-msgstr "Fiches à ne plus recommander"
+msgstr "Páginas de produto a deixar de recomendar"
 
 #: buyit-together.php:1603
 msgid "These products disappear from the “On this product page” column of the recommendations table below. Use it for product pages whose configuration you have decided once and for all not to touch, and whose reminders clutter the list."
-msgstr "Ces produits disparaissent de la colonne « Sur cette fiche produit » du tableau de recommandations ci-dessous. À utiliser pour les fiches dont on a décidé une fois pour toutes de ne plus toucher la configuration, et dont les rappels encombrent la liste."
+msgstr "Estes produtos desaparecem da coluna «Nesta página de produto» da tabela de recomendações abaixo. Usa-o para páginas de produto cuja configuração decidiste de uma vez por todas não mexer e cujos lembretes atulham a lista."
 
 #: buyit-together.php:1610
 msgid "Search for a product page to stop recommending…"
-msgstr "Rechercher une fiche à ne plus recommander…"
+msgstr "Procurar uma página de produto a deixar de recomendar…"
 
 #: buyit-together.php:1617
 msgid "Screen setting only: these product pages keep showing their suggestion block to visitors, and their products keep counting in the calculation and the ranking."
-msgstr "Réglage d'écran uniquement : ces fiches continuent d'afficher leur bloc de suggestions aux visiteurs, et leurs produits de compter dans le calcul comme dans le classement."
+msgstr "Definição apenas deste ecrã: estas páginas de produto continuam a mostrar o seu bloco de sugestões aos visitantes, e os seus produtos continuam a contar no cálculo e na classificação."
 
 #: buyit-together.php:1618
 msgid "Save these product pages"
-msgstr "Enregistrer ces fiches"
+msgstr "Guardar estas páginas de produto"
 
 #: buyit-together.php:1641
 msgid "Recommendations"
-msgstr "Recommandations"
+msgstr "Recomendações"
 
 #. translators: %d: number of missing associations
 #: buyit-together.php:1646
 #, php-format
 msgid "%d associations are firmly established by your sales but missing from your configuration. The most frequent:"
-msgstr "%d associations sont solidement établies par vos ventes mais absentes de votre configuration. Les plus fréquentes :"
+msgstr "%d associações estão firmemente estabelecidas pelas tuas vendas mas faltam na tua configuração. As mais frequentes:"
 
 #: buyit-together.php:1657
 msgid "On this product page"
-msgstr "Sur cette fiche produit"
+msgstr "Nesta página de produto"
 
 #: buyit-together.php:1658
 msgid "suggest"
-msgstr "proposer"
+msgstr "sugerir"
 
 #: buyit-together.php:1659
 msgid "Bought together"
-msgstr "Achetés ensemble"
+msgstr "Comprados juntos"
 
 #. translators: %d: how many times the pair was bought together
 #: buyit-together.php:1668
 #: buyit-together.php:1741
 #, php-format
 msgid "%d times"
-msgstr "%d fois"
+msgstr "%d vezes"
 
 #: buyit-together.php:1673
 msgid "The plugin adds these products to WooCommerce cross-sells. The operation can be undone from the Cart tab."
-msgstr "L'application ajoute ces produits aux ventes croisées WooCommerce. L'opération est annulable depuis l'onglet Panier."
+msgstr "O plugin adiciona estes produtos às vendas cruzadas do WooCommerce. A operação pode ser anulada no separador Carrinho."
 
 #: buyit-together.php:1675
 msgid "Apply selection"
-msgstr "Appliquer la sélection"
+msgstr "Aplicar a seleção"
 
 #. translators: %d: number of selected rows
 #: buyit-together.php:1687
@@ -401,389 +401,389 @@ msgstr "Appliquer la sélection"
 #, php-format
 msgid "%d selected"
 msgid_plural "%d selected"
-msgstr[0] "%d sélectionnés"
-msgstr[1] "%d sélectionnés"
+msgstr[0] "%d selecionado"
+msgstr[1] "%d selecionados"
 
 #: buyit-together.php:1715
 msgid "No missing association: your configuration matches your sales."
-msgstr "Aucune association manquante : votre configuration correspond à vos ventes."
+msgstr "Não falta nenhuma associação: a tua configuração corresponde às tuas vendas."
 
 #: buyit-together.php:1721
 msgid "Most frequently bought together"
-msgstr "Couples les plus achetés ensemble"
+msgstr "Comprados juntos com mais frequência"
 
 #. translators: %d: number of product pairs above the threshold
 #: buyit-together.php:1726
 #, php-format
 msgid "%d pairs appear at least 3 times in the same order. The top 20:"
-msgstr "%d couples apparaissent au moins 3 fois dans une même commande. Les 20 premiers :"
+msgstr "%d pares aparecem pelo menos 3 vezes na mesma encomenda. Os 20 primeiros:"
 
 #: buyit-together.php:1733
 msgid "Frequency"
-msgstr "Fréquence"
+msgstr "Frequência"
 
 #: buyit-together.php:1734
 #: buyit-together.php:2385
 #: buyit-together.php:2391
 msgid "Product"
-msgstr "Produit"
+msgstr "Produto"
 
 #: buyit-together.php:1735
 msgid "bought with"
-msgstr "acheté avec"
+msgstr "comprado com"
 
 #: buyit-together.php:1748
 msgid "Useful for spotting families of parts that get repaired together, and deriving rules from them."
-msgstr "Utile pour repérer les familles de pièces qui se réparent ensemble, et en déduire des règles."
+msgstr "Útil para detetar famílias de peças que são reparadas em conjunto e daí derivar regras."
 
 #: buyit-together.php:1750
 msgid "Not enough multi-item orders yet to build a ranking."
-msgstr "Pas encore assez de commandes multi-articles pour établir un classement."
+msgstr "Ainda não há encomendas com vários artigos suficientes para criar uma classificação."
 
 #: buyit-together.php:1765
 msgid "How and where suggestions appear to the customer. Their content is configured in the other tabs; only presentation lives here."
-msgstr "Comment et où les suggestions apparaissent au client. Leur contenu se configure dans les autres onglets ; seule la présentation vit ici."
+msgstr "Como e onde o cliente vê as sugestões. O seu conteúdo é configurado nos outros separadores; aqui está apenas a apresentação."
 
 #: buyit-together.php:1769
 msgid "How suggestions are shown"
-msgstr "Où afficher les suggestions"
+msgstr "Como as sugestões são mostradas"
 
 #: buyit-together.php:1771
 msgid "The block sits at the bottom of the page, where the customer may not scroll to. The window opens right after Add to cart, at the moment they are already buying — the two are not mutually exclusive."
-msgstr "Le bloc se trouve en bas de page, là où le client ne fait pas toujours défiler. La fenêtre s'ouvre juste après l'ajout au panier, au moment où il est déjà en train d'acheter — les deux ne s'excluent pas."
+msgstr "O bloco fica no fundo da página, até onde o cliente pode não chegar a deslizar. A janela abre logo a seguir a adicionar ao carrinho, no momento em que já está a comprar — os dois não se excluem mutuamente."
 
 #: buyit-together.php:1779
 msgid "Block at the bottom of the product page only"
-msgstr "Bloc en bas de la fiche produit uniquement"
+msgstr "Apenas o bloco no fundo da página de produto"
 
 #: buyit-together.php:1783
 msgid "Window on Add to cart only"
-msgstr "Fenêtre à l'ajout au panier uniquement"
+msgstr "Apenas a janela ao adicionar ao carrinho"
 
 #: buyit-together.php:1787
 msgid "Both"
-msgstr "Les deux"
+msgstr "Ambos"
 
 #: buyit-together.php:1790
 msgid "The window calls WooCommerce's own cart API in the browser, so the page never reloads. If the theme's Add to cart button already does something similar, test this on a staging copy of the site before turning it on everywhere."
-msgstr "La fenêtre appelle l'API du panier de WooCommerce directement dans le navigateur, la page ne recharge donc jamais. Si le bouton Ajouter au panier du thème fait déjà quelque chose de semblable, testez sur une copie du site avant de l'activer partout."
+msgstr "A janela chama a própria API de carrinho do WooCommerce no navegador, pelo que a página nunca recarrega. Se o botão de adicionar ao carrinho do tema já faz algo semelhante, testa isto numa cópia de staging do site antes de o ativar em todo o lado."
 
 #: buyit-together.php:1791
 #: buyit-together.php:1870
 msgid "Save"
-msgstr "Enregistrer"
+msgstr "Guardar"
 
 #. translators: %s: installed WooCommerce version number
 #: buyit-together.php:1797
 #, php-format
 msgid "The Add to cart window needs WooCommerce 8.3 or later (this site runs %s). The block below stays available regardless."
-msgstr "La fenêtre d'ajout au panier nécessite WooCommerce 8.3 ou plus récent (ce site utilise la %s). Le bloc ci-dessous reste disponible dans tous les cas."
+msgstr "A janela de adicionar ao carrinho precisa do WooCommerce 8.3 ou posterior (este site usa %s). O bloco abaixo continua disponível de qualquer forma."
 
 #: buyit-together.php:1805
 msgid "Window appearance"
-msgstr "Apparence de la fenêtre"
+msgstr "Aspeto da janela"
 
 #: buyit-together.php:1806
 msgid "Applies whenever the window is enabled above, whether or not the block is also shown."
-msgstr "S'applique dès que la fenêtre est activée ci-dessus, que le bloc soit aussi affiché ou non."
+msgstr "Aplica-se sempre que a janela estiver ativada acima, quer o bloco seja mostrado ou não."
 
 #: buyit-together.php:1814
 msgid "Suggestions title"
-msgstr "Titre des suggestions"
+msgstr "Título das sugestões"
 
 #: buyit-together.php:1820
 msgid "\"Added to cart\" message"
-msgstr "Message « ajouté au panier »"
+msgstr "Mensagem «Adicionado ao carrinho»"
 
 #: buyit-together.php:1826
 msgid "Colours"
-msgstr "Couleurs"
+msgstr "Cores"
 
 #: buyit-together.php:1830
 msgid "Automatically match my theme's colours"
-msgstr "Faire correspondre automatiquement aux couleurs de mon thème"
+msgstr "Adaptar automaticamente às cores do meu tema"
 
 #: buyit-together.php:1832
 msgid "Reads the colour of the real Add to cart button and the page background at the moment the window opens. Uncheck to set fixed colours instead."
-msgstr "Lit la couleur du vrai bouton Ajouter au panier et du fond de page au moment où la fenêtre s'ouvre. Décochez pour fixer des couleurs à la place."
+msgstr "Lê a cor do verdadeiro botão de adicionar ao carrinho e do fundo da página no momento em que a janela abre. Desmarca para definir cores fixas em alternativa."
 
 #: buyit-together.php:1834
 msgid "Accent"
-msgstr "Accent"
+msgstr "Cor de destaque"
 
 #: buyit-together.php:1837
 msgid "Background"
-msgstr "Fond"
+msgstr "Fundo"
 
 #: buyit-together.php:1840
 msgid "Text"
-msgstr "Texte"
+msgstr "Texto"
 
 #: buyit-together.php:1843
 msgid "Pick background and text colours with enough contrast between them to stay readable."
-msgstr "Choisissez un fond et un texte avec assez de contraste entre eux pour rester lisibles."
+msgstr "Escolhe cores de fundo e de texto com contraste suficiente entre si para continuarem legíveis."
 
 #: buyit-together.php:1848
 msgid "Corner rounding"
-msgstr "Arrondi des coins"
+msgstr "Arredondamento dos cantos"
 
 #: buyit-together.php:1857
 msgid "Layout"
-msgstr "Disposition"
+msgstr "Disposição"
 
 #: buyit-together.php:1861
 msgid "Row: one suggestion per line"
-msgstr "Ligne : une suggestion par ligne"
+msgstr "Linha: uma sugestão por linha"
 
 #: buyit-together.php:1865
 msgid "Columns: a small grid of cards"
-msgstr "Colonnes : une petite grille de vignettes"
+msgstr "Colunas: uma pequena grelha de cartões"
 
 #: buyit-together.php:1874
 msgid "Preview"
-msgstr "Aperçu"
+msgstr "Pré-visualização"
 
 #: buyit-together.php:1980
 msgid "What the customer sees on the product page, before adding to the cart. These suggestions belong to the plugin and do not affect WooCommerce cross-sells."
-msgstr "Ce que voit le client sur la fiche produit, avant d'ajouter au panier. Ces suggestions sont propres à l'extension et n'affectent pas les ventes croisées de WooCommerce."
+msgstr "O que o cliente vê na página de produto, antes de adicionar ao carrinho. Estas sugestões pertencem ao plugin e não afetam as vendas cruzadas do WooCommerce."
 
 #: buyit-together.php:1983
 msgid "Associations calculated from history take priority; the rules below only serve products that do not have any yet. The calculation and its diagnosis are in the Analysis tab."
-msgstr "Les associations calculées depuis l'historique sont prioritaires ; les règles ci-dessous ne servent qu'aux produits qui n'en ont pas encore. Le calcul et son diagnostic se trouvent dans l'onglet Analyse."
+msgstr "As associações calculadas a partir do histórico têm prioridade; as regras abaixo servem apenas produtos que ainda não têm nenhuma. O cálculo e o seu diagnóstico estão no separador Análise."
 
 #: buyit-together.php:1986
 msgid "Rules by family of parts"
-msgstr "Règles par famille de pièces"
+msgstr "Regras por família de peças"
 
 #: buyit-together.php:1987
 msgid "For products that do not have enough history yet. Choose a tag (a family of items) or a category (a product line), then the items to suggest."
-msgstr "Pour les produits qui n'ont pas encore assez d'historique. Choisissez une étiquette (famille d'articles) ou une catégorie (gamme de produits), puis les articles à proposer."
+msgstr "Para produtos que ainda não têm histórico suficiente. Escolhe uma etiqueta (uma família de artigos) ou uma categoria (uma linha de produtos) e depois os artigos a sugerir."
 
 #: buyit-together.php:1988
 msgid "Example: tag “Battery” → Charger, Protective case"
-msgstr "Exemple : étiquette « Batterie » → Chargeur, Housse de protection"
+msgstr "Exemplo: etiqueta «Bateria» → Carregador, Estojo de proteção"
 
 #: buyit-together.php:1996
 msgid "Target tag or category"
-msgstr "Étiquette ou catégorie visée"
+msgstr "Etiqueta ou categoria de destino"
 
 #: buyit-together.php:1997
 msgid "Products to suggest"
-msgstr "Produits à proposer"
+msgstr "Produtos a sugerir"
 
 #: buyit-together.php:2007
 msgid "Choose a tag or a category…"
-msgstr "Choisir une étiquette ou une catégorie…"
+msgstr "Escolhe uma etiqueta ou uma categoria…"
 
 #: buyit-together.php:2019
 #: buyit-together.php:2139
 #: buyit-together.php:2147
 msgid "Search for a product…"
-msgstr "Rechercher un produit…"
+msgstr "Procurar um produto…"
 
 #: buyit-together.php:2031
 msgid "Remove"
-msgstr "Supprimer"
+msgstr "Remover"
 
 #: buyit-together.php:2038
 msgid "Add a rule"
-msgstr "Ajouter une règle"
+msgstr "Adicionar uma regra"
 
 #: buyit-together.php:2040
 msgid "Save rules"
-msgstr "Enregistrer les règles"
+msgstr "Guardar as regras"
 
 #: buyit-together.php:2092
 msgid "What the customer sees in their cart, after choosing a product. These are WooCommerce cross-sells, shared with the rest of the site."
-msgstr "Ce que voit le client dans son panier, après avoir choisi un produit. Ce sont les ventes croisées de WooCommerce, partagées avec le reste du site."
+msgstr "O que o cliente vê no seu carrinho, depois de escolher um produto. São as vendas cruzadas do WooCommerce, partilhadas com o resto do site."
 
 #: buyit-together.php:2098
 msgid "Recent cross-sell changes"
-msgstr "Modifications récentes des ventes croisées"
+msgstr "Alterações recentes às vendas cruzadas"
 
 #. translators: 1: date, 2: name of the operation, 3: number of products affected
 #: buyit-together.php:2104
 #, php-format
 msgid "%1$s — %2$s — %3$d products"
-msgstr "%1$s — %2$s — %3$d produits"
+msgstr "%1$s — %2$s — %3$d produtos"
 
 #: buyit-together.php:2111
 msgid "Undo this one"
-msgstr "Annuler celle-ci"
+msgstr "Anular esta"
 
 #: buyit-together.php:2116
 msgid "Undo works one operation at a time, from the most recent to the oldest."
-msgstr "L'annulation se fait une opération à la fois, de la plus récente à la plus ancienne."
+msgstr "A anulação funciona uma operação de cada vez, da mais recente para a mais antiga."
 
 #: buyit-together.php:2121
 #: buyit-together.php:2879
 msgid "Bulk assignment"
-msgstr "Attribution en masse"
+msgstr "Atribuição em massa"
 
 #: buyit-together.php:2122
 msgid "Adds cross-sell products to a whole category, a tag or a selection of products."
-msgstr "Ajoute des produits croisés à toute une catégorie, une étiquette ou une sélection de produits."
+msgstr "Adiciona produtos de venda cruzada a uma categoria inteira, a uma etiqueta ou a uma seleção de produtos."
 
 #: buyit-together.php:2129
 msgid "Apply to"
-msgstr "Appliquer à"
+msgstr "Aplicar a"
 
 #: buyit-together.php:2132
 msgid "Categories or tags…"
-msgstr "Catégories ou étiquettes…"
+msgstr "Categorias ou etiquetas…"
 
 #: buyit-together.php:2137
 msgid "and / or specific products:"
-msgstr "et / ou des produits précis :"
+msgstr "e/ou produtos específicos:"
 
 #: buyit-together.php:2144
 msgid "Cross-sell products to add"
-msgstr "Produits croisés à ajouter"
+msgstr "Produtos de venda cruzada a adicionar"
 
 #: buyit-together.php:2152
 msgid "Mode"
-msgstr "Mode"
+msgstr "Modo"
 
 #: buyit-together.php:2155
 msgid "Add to existing cross-sells"
-msgstr "Ajouter aux ventes croisées existantes"
+msgstr "Adicionar às vendas cruzadas existentes"
 
 #: buyit-together.php:2157
 msgid "Replace existing cross-sells"
-msgstr "Remplacer les ventes croisées existantes"
+msgstr "Substituir as vendas cruzadas existentes"
 
 #: buyit-together.php:2158
 msgid "Previous values are saved: the operation can be undone."
-msgstr "Les valeurs précédentes sont sauvegardées : l'opération est annulable."
+msgstr "Os valores anteriores são guardados: a operação pode ser anulada."
 
 #: buyit-together.php:2162
 msgid "Apply"
-msgstr "Appliquer"
+msgstr "Aplicar"
 
 #: buyit-together.php:2208
 msgid "Back to the analysis"
-msgstr "Retour à l'analyse"
+msgstr "Voltar à análise"
 
 #: buyit-together.php:2214
 msgid "Upsells offer a higher-end alternative to the product being viewed, on its page. Rarely useful on a spare-parts catalogue, but editable here if needed."
-msgstr "Les montées en gamme proposent une alternative supérieure au produit consulté, sur sa fiche. Peu utile sur un catalogue de pièces détachées, mais éditable ici si besoin."
+msgstr "As vendas superiores oferecem uma alternativa de gama mais alta ao produto que está a ser visto, na sua página. Raramente úteis num catálogo de peças, mas editáveis aqui se for preciso."
 
 #: buyit-together.php:2216
 msgid "Review view: the products of a category or a tag, with their product page suggestions and their cart cross-sells. Calculated associations are shown for reference."
-msgstr "Vue de relecture : les produits d'une catégorie ou d'une étiquette, avec leurs suggestions de fiche et leurs ventes croisées de panier. Les associations calculées sont rappelées à titre indicatif."
+msgstr "Vista de revisão: os produtos de uma categoria ou de uma etiqueta, com as suas sugestões de página de produto e as suas vendas cruzadas de carrinho. As associações calculadas são mostradas como referência."
 
 #: buyit-together.php:2229
 msgid "A category or a tag…"
-msgstr "Une catégorie ou une étiquette…"
+msgstr "Uma categoria ou uma etiqueta…"
 
 #: buyit-together.php:2230
 msgid "— none —"
-msgstr "— aucune —"
+msgstr "— nenhuma —"
 
 #: buyit-together.php:2240
 msgid "and / or specific products…"
-msgstr "et / ou des produits précis…"
+msgstr "e/ou produtos específicos…"
 
 #: buyit-together.php:2249
 msgid "Products per page:"
-msgstr "Produits par page :"
+msgstr "Produtos por página:"
 
 #: buyit-together.php:2256
 msgid "Show"
-msgstr "Afficher"
+msgstr "Mostrar"
 
 #: buyit-together.php:2260
 msgid "Reset the selection"
-msgstr "Réinitialiser la sélection"
+msgstr "Repor a seleção"
 
 #: buyit-together.php:2267
 msgid "Choose a category, a tag or products to start."
-msgstr "Choisissez une catégorie, une étiquette ou des produits pour commencer."
+msgstr "Escolhe uma categoria, uma etiqueta ou produtos para começar."
 
 #: buyit-together.php:2297
 #: buyit-together.php:2313
 msgid "No product in this selection."
-msgstr "Aucun produit dans cette sélection."
+msgstr "Nenhum produto nesta seleção."
 
 #. translators: 1: total products, 2: current page, 3: total pages
 #: buyit-together.php:2320
 #, php-format
 msgid "%1$d products — page %2$d of %3$d"
-msgstr "%1$d produits — page %2$d sur %3$d"
+msgstr "%1$d produtos — página %2$d de %3$d"
 
 #: buyit-together.php:2356
 msgid "Apply to every row shown"
-msgstr "Appliquer à toutes les lignes affichées"
+msgstr "Aplicar a todas as linhas mostradas"
 
 #: buyit-together.php:2359
 msgid "Choose the product to add…"
-msgstr "Choisir le produit à ajouter…"
+msgstr "Escolhe o produto a adicionar…"
 
 #: buyit-together.php:2364
 msgid "Add to upsells"
-msgstr "Ajouter aux montées en gamme"
+msgstr "Adicionar às vendas superiores"
 
 #: buyit-together.php:2366
 msgid "Add to suggestions"
-msgstr "Ajouter aux suggestions"
+msgstr "Adicionar às sugestões"
 
 #: buyit-together.php:2367
 msgid "Add to cross-sells"
-msgstr "Ajouter aux ventes croisées"
+msgstr "Adicionar às vendas cruzadas"
 
 #: buyit-together.php:2369
 msgid "Remove everywhere"
-msgstr "Retirer partout"
+msgstr "Remover em todo o lado"
 
 #. translators: %d: number of products shown on the current page
 #: buyit-together.php:2374
 #, php-format
 msgid "Acts on the %d products shown on this page. Nothing is saved until you confirm at the bottom."
-msgstr "Agit sur les %d produits affichés sur cette page. Rien n'est enregistré tant que vous n'avez pas validé en bas."
+msgstr "Atua sobre os %d produtos mostrados nesta página. Nada é guardado até confirmares no fundo."
 
 #: buyit-together.php:2388
 msgid "— product page, as an alternative"
-msgstr "— fiche produit, en alternative"
+msgstr "— página de produto, como alternativa"
 
 #: buyit-together.php:2393
 msgid "Suggestions"
-msgstr "Suggestions"
+msgstr "Sugestões"
 
 #: buyit-together.php:2394
 msgid "— product page"
-msgstr "— fiche produit"
+msgstr "— página de produto"
 
 #: buyit-together.php:2397
 msgid "Cross-sells"
-msgstr "Ventes croisées"
+msgstr "Vendas cruzadas"
 
 #: buyit-together.php:2398
 msgid "— cart"
-msgstr "— panier"
+msgstr "— carrinho"
 
 #: buyit-together.php:2428
 msgid "Edit"
-msgstr "Modifier"
+msgstr "Editar"
 
 #: buyit-together.php:2440
 #: buyit-together.php:2453
 #: buyit-together.php:2474
 msgid "Search…"
-msgstr "Rechercher…"
+msgstr "Procurar…"
 
 #: buyit-together.php:2462
 msgid "Calculated:"
-msgstr "Calculé :"
+msgstr "Calculado:"
 
 #: buyit-together.php:2488
 msgid "Save this page"
-msgstr "Enregistrer cette page"
+msgstr "Guardar esta página"
 
 #: buyit-together.php:2508
 msgid "Choose a product first."
-msgstr "Choisissez d'abord un produit."
+msgstr "Escolhe primeiro um produto."
 
 #: buyit-together.php:2552
 msgid "field(s) changed — remember to save."
-msgstr "champ(s) modifié(s) — pensez à enregistrer."
+msgstr "campo(s) alterado(s) — não te esqueças de guardar."
 

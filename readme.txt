@@ -4,7 +4,7 @@ Tags: woocommerce, cross-sells, related products, upsell, recommendations
 Requires at least: 6.0
 Tested up to: 7.1
 Requires PHP: 8.0
-Stable tag: 1.3.3
+Stable tag: 1.1.1
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -87,7 +87,11 @@ become the companion of your whole catalogue.
 
 = Does it work with High-Performance Order Storage? =
 
-Yes. It reads orders from the HPOS tables directly.
+It requires it. The plugin reads the HPOS order tables directly, so a shop
+still using the classic order storage has nothing for it to read: the analysis
+finds no orders and no associations, however many sales the shop has. The
+plugin now says so on its Analysis screen rather than leaving you to guess.
+You can switch under WooCommerce > Settings > Advanced > Features.
 
 == Screenshots ==
 
@@ -97,33 +101,29 @@ Yes. It reads orders from the HPOS tables directly.
 
 == Changelog ==
 
-= 1.3.3 =
-* Fixed: in the Columns layout, fewer suggestions than fit a full row stayed pinned to the left instead of being centred.
+= 1.1.1 =
+* Added: Spanish, German, Italian, Portuguese and Dutch translations, alongside the existing French. A translation template (`.pot`) now ships with the plugin for anyone wanting to add a language.
+* Fixed: the View product button (shown for variable products, which cannot be added in one click) could still be sized differently from the Add button on some themes. Both now use one fixed width that the host theme cannot override.
+* Fixed: the sample cart line in the settings preview was hardcoded in English instead of following the admin's language.
+* Fixed: on a shop still using the classic order storage, the plugin read the (empty) high-performance order tables and silently reported no orders and no associations, however many sales the shop had. It now detects this and says so on the Analysis screen, instead of leaving you to guess. The FAQ was misleading on this point and has been corrected: the plugin requires high-performance order storage.
+* Fixed: a recalculation that found nothing left the previous figures on screen untouched, so pressing "Recalculate now" appeared to do nothing at all. It now records that the calculation ran and found nothing, while leaving the existing associations in place — an empty result usually means a passing cause (analysis window, exclusions, unreadable order storage) rather than data that has genuinely gone.
+* Security: the "Run the analysis again" link now carries a nonce. It re-runs a full pass over the order history, bypassing the cache; without a token any third-party page could make a passing administrator trigger that work repeatedly. A stale link simply falls back to the cached analysis.
+* Fixed: two stray documentation blocks sat above the wrong functions, one of them describing a seeded default rule that the plugin does not create.
 
-= 1.3.2 =
-* Fixed: a real (non-square) product photo — two parts side by side, a close-up, a long thin item — inflated its card far beyond what its content needed, which is what made the window tall enough to need scrolling in the first place. Thumbnails are now a fixed compact size, not sized from the image itself.
-* The window is now capped to 4 suggestions, regardless of how many are configured for the product — a fixed-size window with no internal scrolling cannot simply grow to fit an open-ended list. Filterable via `bit_nb_modal`.
-* Wider window, smaller cards: more suggestions fit in a single row instead of stacking into extra rows.
-* Add / View product buttons are now a guaranteed identical size in every layout, not just when the grid happened to make them match.
-
-= 1.3.1 =
-* Fixed: in the Columns layout, a real (longer) product name wrapped to three or four lines, throwing off the Add buttons' alignment from one card to the next. Names are now capped to two lines and cards keep the same height.
-* The window no longer scrolls internally in normal use; only a whole-window scroll remains as a safety net for an unusually long list of suggestions.
-* Smaller Add / View product buttons, matched in width regardless of their label length.
-* "View cart" and "Continue shopping" are now centred.
-
-= 1.3.0 =
-* The Add to cart window has been redesigned: rounded panel, soft shadow, a checkmark badge, an entrance animation, and a proper two-layout choice (row or a small grid of cards).
-* New: the window can now be customised — suggestions title, "added to cart" message, accent/background/text colours, corner rounding, and layout — from a new Settings tab, with a live preview.
+= 1.1.0 =
+* The Add to cart window has been redesigned: rounded panel, soft shadow, a checkmark badge, an entrance animation, and a proper two-layout choice (row, or a small grid of cards).
+* New "Settings" tab, gathering where suggestions appear (block, window, or both) and how the window looks — suggestions title, "added to cart" message, accent/background/text colours, corner rounding, and layout — with a live preview. Previously these were mixed into Product page suggestions.
 * By default the window automatically matches the site's own colours (the real Add to cart button and page background), rather than an arbitrary fixed colour. A checkbox switches to fixed colours instead.
-* New "Settings" tab: where suggestions appear (block, window, or both) and the window's appearance now live together, instead of being mixed into Product page suggestions.
+* Cards keep the same size whatever the content: thumbnails are a fixed compact size rather than sized from the photo (a real, non-square product photo would otherwise inflate its card far beyond what it needed), names are capped to two lines, and Add / View product buttons share one width in every layout.
+* The window never scrolls internally: it is capped to 4 suggestions regardless of how many are configured for the product, since a fixed-size window cannot grow to fit an open-ended list. Wider window and smaller cards let more of them fit in a single row. Filterable via `bit_nb_modal`.
+* Suggestions are centred in the window, as are "View cart" and "Continue shopping".
 
-= 1.2.0 =
+= 1.0.2 =
 * New: an optional window can open right after "Add to cart" on the product page, showing the same suggestions with their own "Add" buttons — the customer never leaves the page. Uses WooCommerce's own public cart API (Store API), so it works alongside whatever the theme's Add to cart button already does.
 * New setting under Product page suggestions: show the suggestions as the existing block, as the new window, or both. Off by default — existing sites keep their current behaviour until this is turned on. Requires WooCommerce 8.3 or later; the option is hidden with an explanation on older versions.
 * The window's own quick-add buttons only appear for simple products; variable products link to their page instead, since picking a variation needs its own screen.
 
-= 1.1.0 =
+= 1.0.1 =
 * Brand mark added next to the screen title, matching the plugin directory icon.
 * A confirmation now appears after every save — applying recommendations, saving exclusions, bulk assignment, undo, and recalculation all previously redirected silently.
 * Stat tiles on the Analysis tab are now shortcuts to the section that explains them.

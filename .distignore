@@ -1,0 +1,11 @@
+# Fichiers de développement, à ne pas livrer dans le paquet WordPress.org.
+# Plugin Check les signale s'ils restent dans le dossier de l'extension ;
+# ils n'ont rien à faire chez l'utilisateur final.
+.git
+.gitignore
+.distignore
+.DS_Store
+*.zip
+AUDIT_PROGRESS.md
+README.md
+.wordpress-org
