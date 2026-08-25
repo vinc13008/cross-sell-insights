@@ -102,6 +102,8 @@ configure. Switching from one to the other changes nothing for it.
 == Changelog ==
 
 = 1.1.1 =
+* The "added to cart" badge is now a white tick on green, rather than the shop's own accent colour: on a shop whose accent is red, a red badge read as an error where nothing had gone wrong.
+* Fixed: in the window, View product sat lower than the Add buttons beside it on themes that give their buttons a bottom margin without giving one to links. Margins are now pinned, so all of them share one baseline.
 * Added: Spanish, German, Italian, Portuguese and Dutch translations, alongside the existing French. A translation template (`.pot`) now ships with the plugin for anyone wanting to add a language.
 * Fixed: the View product button (shown for variable products, which cannot be added in one click) came out a different size from the Add buttons on themes that style their buttons — it is a link, not a button, so the theme's own uppercase, line-height and minimum-height reached one but not the other. Every property that decides the rendered box is now pinned, so all of them match whatever the theme does. Colour and corner rounding stay yours to set.
 * Fixed: the sample cart line in the settings preview was hardcoded in English instead of following the admin's language.

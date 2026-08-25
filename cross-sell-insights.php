@@ -820,9 +820,14 @@ final class Cross_Sell_Insights {
 			.csins-modal__fermer:hover { opacity: 1; background: color-mix(in srgb, var(--csins-texte, #1d2327) 8%, transparent); }
 			.csins-modal__ajoute { display: flex; align-items: center; flex-wrap: wrap; gap: .55em;
 				margin: 0 0 1em; padding-right: 2.2em; font-weight: 600; }
+			/* Vert, et non la couleur d'accent de la boutique : cette pastille dit
+			   « c'est fait », un sens que le vert porte partout. Sur une boutique
+			   dont l'accent est rouge, la reprendre ici ferait lire une erreur là
+			   où tout s'est bien passé. */
 			.csins-modal__coche { display: inline-flex; align-items: center; justify-content: center;
-				width: 1.5em; height: 1.5em; border-radius: 50%; background: var(--csins-accent, #1d2327); color: #fff;
-				font-size: .72em; flex: 0 0 auto; }
+				width: 1.5em; height: 1.5em; border-radius: 50%;
+				background: #1f8b4c !important; color: #fff !important;
+				font-size: .72em; flex: 0 0 auto; line-height: 1; }
 			.csins-modal__compte { flex-basis: 100%; font-weight: 400; opacity: .65; font-size: .92em; }
 			.csins-modal__titre { font-size: 1em; margin: 0 0 .8em; }
 			/* Ni sur la liste ni sur la fenêtre : aucun défilement interne. Les
@@ -858,7 +863,7 @@ final class Cross_Sell_Insights {
 			.csins-modal__liste--colonnes .csins-modal__nom { display: -webkit-box; -webkit-line-clamp: 2;
 				-webkit-box-orient: vertical; overflow: hidden; min-height: calc(.8em * 1.3 * 2); }
 			.csins-modal__liste--colonnes .csins-modal__ajouter, .csins-modal__liste--colonnes .csins-modal__voir {
-				margin-top: auto; }
+				margin-top: auto !important; }
 			.csins-modal__item img { display: block; object-fit: cover; flex: 0 0 auto; width: 56px; height: 56px;
 				border-radius: max(4px, calc(var(--csins-rayon, 14px) * .5)); }
 			.csins-modal__nom { font-size: .8em; line-height: 1.3; }
@@ -876,6 +881,10 @@ final class Cross_Sell_Insights {
 			.csins-modal__ajouter, .csins-modal__voir, .csins-modal__pied .button {
 				box-sizing: border-box !important; flex: 0 0 auto; white-space: nowrap; border: 0; cursor: pointer;
 				text-decoration: none; text-align: center;
+				/* Marges remises à zéro : un thème qui donne une marge basse à ses
+				   <button> sans en donner aux liens décale les deux d'autant, et
+				   « Ajouter » ne s'aligne plus avec « Voir le produit ». */
+				margin: 0 !important; vertical-align: middle !important;
 				display: inline-flex !important; align-items: center !important; justify-content: center !important;
 				width: 118px !important; min-width: 118px !important; max-width: 118px !important;
 				font-size: .74em !important; line-height: 1.15 !important;
